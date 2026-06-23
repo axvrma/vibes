@@ -24,12 +24,18 @@ declare global {
 export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization header.' } });
-    return;
+  let token: string | undefined;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query.token && typeof req.query.token === 'string') {
+    token = req.query.token;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Missing or invalid authorization token.' } });
+    return;
+  }
 
   try {
     const { payload } = await jose.jwtVerify(token, secret, {

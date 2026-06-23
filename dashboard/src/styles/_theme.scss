@@ -1,0 +1,73 @@
+@use '@angular/material' as mat;
+
+$light-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$violet-palette,
+    tertiary: mat.$orange-palette,
+  ),
+  typography: (
+    plain-family: 'Roboto, "Helvetica Neue", sans-serif',
+    brand-family: 'Roboto, "Helvetica Neue", sans-serif',
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+$dark-theme: mat.define-theme((
+  color: (
+    theme-type: dark,
+    primary: mat.$violet-palette,
+    tertiary: mat.$orange-palette,
+  ),
+  typography: (
+    plain-family: 'Roboto, "Helvetica Neue", sans-serif',
+    brand-family: 'Roboto, "Helvetica Neue", sans-serif',
+  ),
+  density: (
+    scale: 0
+  )
+));
+
+@include mat.core();
+
+html {
+  @include mat.all-component-themes($light-theme);
+  @include mat.system-level-colors($light-theme);
+  @include mat.system-level-typography($light-theme);
+  
+  // Custom semantic tokens utilizing Material 3 roles where possible
+  --app-background: var(--sys-surface);
+  --app-surface: var(--sys-surface-container);
+  --app-surface-container: var(--sys-surface-container);
+  --app-surface-container-high: var(--sys-surface-container-high);
+  --app-outline: var(--sys-outline);
+  --app-outline-variant: var(--sys-outline-variant);
+  
+  --app-primary: var(--sys-primary);
+  --app-on-primary: var(--sys-on-primary);
+  --app-secondary: var(--sys-secondary);
+  --app-on-secondary: var(--sys-on-secondary);
+  --app-tertiary: var(--sys-tertiary);
+  --app-on-tertiary: var(--sys-on-tertiary);
+  --app-error: var(--sys-error);
+  --app-on-error: var(--sys-on-error);
+  
+  // Additional semantic tokens requested
+  --app-success: #4caf50;
+  --app-warning: #ff9800;
+  --app-info: #2196f3;
+  
+  --app-text-primary: var(--sys-on-surface);
+  --app-text-secondary: var(--sys-on-surface-variant);
+  
+  @media (prefers-color-scheme: dark) {
+    @include mat.all-component-colors($dark-theme);
+    @include mat.system-level-colors($dark-theme);
+    
+    --app-success: #81c784;
+    --app-warning: #ffb74d;
+    --app-info: #64b5f6;
+  }
+}

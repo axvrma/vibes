@@ -79,4 +79,12 @@ export class MediaApiService {
   updateVideoCategory(videoId: string, payload: { categoryId: string | null; removeIncompatibleTags?: boolean }): Observable<any> {
     return this.http.patch(`${this.apiUrl}/videos/${videoId}/category`, payload);
   }
+
+  getUsers(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/users`);
+  }
+
+  updateUserStatus(userId: string, is_active: boolean): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/users/${userId}/status`, { is_active: is_active ? 1 : 0 });
+  }
 }

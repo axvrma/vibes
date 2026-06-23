@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:vibes/features/reels/presentation/video_feed_screen.dart';
 import '../../reels/presentation/settings_screen.dart';
 import '../data/auth_repository.dart';
@@ -68,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
         title: Text(_isLogin ? 'Login' : 'Sign Up'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.white, size: 24.0),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -84,9 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.play_circle_fill,
-                size: 80,
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedPlay,
+                size: 80.0,
                 color: Color(0xFFE040FB),
               ),
               const SizedBox(height: 32),
@@ -116,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
+                  prefixIcon: HugeIcon(icon: HugeIcons.strokeRoundedMail01, color: Colors.grey, size: 24.0),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -126,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                  prefixIcon: HugeIcon(icon: HugeIcons.strokeRoundedLock, color: Colors.grey, size: 24.0),
                 ),
                 obscureText: true,
               ),

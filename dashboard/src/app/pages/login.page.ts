@@ -6,45 +6,23 @@ import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatCardModule, MatInputModule, MatButtonModule, MatSnackBarModule],
-  template: `
-    <div class="login-container">
-      <mat-card class="login-card">
-        <mat-card-header>
-          <mat-card-title>Admin Login</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-            <mat-form-field appearance="outline" class="full-width mt-2">
-              <mat-label>Email</mat-label>
-              <input matInput type="email" formControlName="email" required>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width mt-2">
-              <mat-label>Password</mat-label>
-              <input matInput type="password" formControlName="password" required>
-            </mat-form-field>
-
-            <button mat-flat-button color="primary" type="submit" [disabled]="loginForm.invalid || isLoading" class="full-width mt-3">
-              {{ isLoading ? 'Logging in...' : 'Login' }}
-            </button>
-          </form>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  `,
-  styles: [`
-    .login-container { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f5f5f5; }
-    .login-card { width: 100%; max-width: 400px; padding: 24px; }
-    .full-width { width: 100%; }
-    .mt-2 { margin-top: 16px; }
-    .mt-3 { margin-top: 24px; }
-  `]
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule, 
+    MatCardModule, 
+    MatInputModule, 
+    MatButtonModule, 
+    MatSnackBarModule,
+    MatIconModule
+  ],
+  templateUrl: './login.page.html',
+  styleUrls: ['./login.page.scss']
 })
 export class LoginPage {
   private fb = inject(FormBuilder);
@@ -58,6 +36,7 @@ export class LoginPage {
   });
 
   isLoading = false;
+  hidePassword = true;
 
   onSubmit() {
     if (this.loginForm.valid) {

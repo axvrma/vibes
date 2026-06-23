@@ -1,0 +1,91 @@
+<div class="page-container">
+  <header class="page-header">
+    <div class="header-text">
+      <h1>Tag Management</h1>
+      <p class="subtitle">Create and manage global tags available for videos and categories</p>
+    </div>
+  </header>
+
+  <div class="split-layout" [class.editing]="isEditing || isCreating">
+    <!-- List Side -->
+    <div class="list-side">
+      <mat-card class="list-card">
+        <mat-card-header class="table-header">
+          <mat-card-title>Tags</mat-card-title>
+          <span class="spacer"></span>
+          <button mat-flat-button color="primary" (click)="createNewTag()">
+            <mat-icon>add</mat-icon> Create Tag
+          </button>
+        </mat-card-header>
+        <mat-card-content class="no-padding">
+          <mat-nav-list>
+            <ng-container *ngFor="let element of tags">
+              <mat-list-item 
+                [class.selected]="editingId === element.id" 
+                (click)="editTag(element)">
+                <div matListItemTitle class="tag-title">
+                  <span class="tag-chip" [style.background-color]="element.color">
+                    {{element.name}}
+                  </span>
+                </div>
+                <div matListItemLine class="tag-meta text-muted">
+                  Used in videos and categories
+                </div>
+                <button mat-icon-button matListItemMeta (click)="deleteTag($event, element)">
+                  <mat-icon color="warn">delete</mat-icon>
+                </button>
+              </mat-list-item>
+              <mat-divider></mat-divider>
+            </ng-container>
+            <div class="empty-state" *ngIf="tags.length === 0">
+              <mat-icon>label_off</mat-icon>
+              <p>No tags created yet</p>
+            </div>
+          </mat-nav-list>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Details Side -->
+    <div class="details-side" *ngIf="isEditing || isCreating">
+      <mat-card class="form-card">
+        <mat-card-header>
+          <mat-card-title>{{ isEditing ? 'Edit Tag' : 'Create Tag' }}</mat-card-title>
+          <span class="spacer"></span>
+          <button mat-icon-button (click)="cancelEdit()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <form [formGroup]="tagForm" (ngSubmit)="onSubmit()" class="form-content">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Tag Name</mat-label>
+              <input matInput formControlName="name" required>
+            </mat-form-field>
+
+            <div class="color-picker-row">
+              <label>Tag Color:</label>
+              <input type="color" formControlName="color" class="color-picker">
+              <span class="color-hex">{{ tagForm.get('color')?.value }}</span>
+            </div>
+
+            <div class="preview-section">
+              <label class="text-muted text-sm">Preview:</label>
+              <span class="tag-chip preview-chip" [style.background-color]="tagForm.get('color')?.value">
+                {{ tagForm.get('name')?.value || 'New Tag' }}
+              </span>
+            </div>
+
+            <div class="form-actions">
+              <button mat-button type="button" (click)="cancelEdit()">Cancel</button>
+              <button mat-flat-button color="primary" type="submit" [disabled]="tagForm.invalid">
+                {{ isEditing ? 'Save Changes' : 'Create Tag' }}
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Users Management</h1>
+    <p>View all registered users and their status.</p>
+  </div>
+
+  <mat-card>
+    <table mat-table [dataSource]="users" class="mat-elevation-z0">
+      
+      <!-- Email Column -->
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef> Email </th>
+        <td mat-cell *matCellDef="let user"> {{user.email}} </td>
+      </ng-container>
+
+      <!-- Role Column -->
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef> Role </th>
+        <td mat-cell *matCellDef="let user"> 
+          <mat-chip-set>
+            <mat-chip [color]="user.role === 'admin' ? 'primary' : 'accent'">
+              {{user.role}}
+            </mat-chip>
+          </mat-chip-set>
+        </td>
+      </ng-container>
+
+      <!-- Status Column -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Status </th>
+        <td mat-cell *matCellDef="let user"> 
+          <mat-icon [color]="user.is_active ? 'primary' : 'warn'">
+            {{ user.is_active ? 'check_circle' : 'cancel' }}
+          </mat-icon>
+        </td>
+      </ng-container>
+
+      <!-- Created At Column -->
+      <ng-container matColumnDef="created_at">
+        <th mat-header-cell *matHeaderCellDef> Joined </th>
+        <td mat-cell *matCellDef="let user"> {{user.created_at | date:'mediumDate'}} </td>
+      </ng-container>
+
+      <!-- Last Login Column -->
+      <ng-container matColumnDef="last_login_at">
+        <th mat-header-cell *matHeaderCellDef> Last Login </th>
+        <td mat-cell *matCellDef="let user"> {{user.last_login_at | date:'medium'}} </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Actions </th>
+        <td mat-cell *matCellDef="let user">
+          <button mat-stroked-button 
+                  [color]="user.is_active ? 'warn' : 'primary'"
+                  (click)="toggleUserStatus(user)"
+                  [disabled]="user.id === currentUser?.id">
+            {{ user.is_active ? 'Revoke Access' : 'Grant Access' }}
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <div *ngIf="users.length === 0" class="empty-state">
+      No users found.
+    </div>
+  </mat-card>
+</div>

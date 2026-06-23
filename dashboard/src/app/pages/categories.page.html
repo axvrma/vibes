@@ -1,0 +1,128 @@
+<div class="page-container">
+  <header class="page-header">
+    <div class="header-text">
+      <h1>Category Management</h1>
+      <p class="subtitle">Organize your media into groups with allowed tags</p>
+    </div>
+    <div class="header-actions">
+      <button mat-flat-button color="primary" (click)="createNewCategory()">
+        <mat-icon>add</mat-icon> Create Category
+      </button>
+    </div>
+  </header>
+
+  <div class="split-layout" [class.editing]="isEditing || isCreating">
+    <!-- List Side -->
+    <div class="list-side">
+      <mat-card class="list-card">
+        <mat-card-content class="no-padding">
+          <mat-nav-list>
+            <ng-container *ngFor="let element of categories">
+              <mat-list-item 
+                [class.selected]="editingId === element.id" 
+                (click)="editCategory(element)">
+                <div matListItemTitle class="category-title">
+                  <span class="color-indicator" [style.background-color]="element.color"></span>
+                  <strong>{{element.name}}</strong>
+                  <span class="status-chip" [class.inactive]="!element.is_active">
+                    {{ element.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+                <div matListItemLine class="category-meta">
+                  <mat-icon>movie</mat-icon> {{ getVideoCount(element.id) }} videos &middot;
+                  <mat-icon>label</mat-icon> {{ element.tags?.length || 0 }} allowed tags
+                </div>
+                <button mat-icon-button matListItemMeta (click)="deleteCategory($event, element)" [disabled]="getVideoCount(element.id) > 0">
+                  <mat-icon color="warn">delete</mat-icon>
+                </button>
+              </mat-list-item>
+              <mat-divider></mat-divider>
+            </ng-container>
+          </mat-nav-list>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Details Side -->
+    <div class="details-side" *ngIf="isEditing || isCreating">
+      <mat-card class="form-card">
+        <mat-card-header>
+          <mat-card-title>{{ isEditing ? 'Edit Category' : 'Create Category' }}</mat-card-title>
+          <span class="spacer"></span>
+          <button mat-icon-button (click)="cancelEdit()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-card-header>
+        
+        <mat-card-content>
+          <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()" class="form-content">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Name</mat-label>
+              <input matInput formControlName="name" (input)="generateSlug()" required>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Slug (auto-generated)</mat-label>
+              <input matInput formControlName="slug" required>
+            </mat-form-field>
+
+            <div class="color-picker-row">
+              <label>Color Theme:</label>
+              <input type="color" formControlName="color" class="color-picker">
+              <span class="color-hex">{{ categoryForm.get('color')?.value }}</span>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Sort Order</mat-label>
+              <input matInput type="number" formControlName="sort_order">
+            </mat-form-field>
+
+            <div class="toggle-row">
+              <mat-slide-toggle formControlName="is_active">
+                Active status
+              </mat-slide-toggle>
+              <span class="text-muted text-sm">Inactive categories won't appear in upload forms</span>
+            </div>
+
+            <div class="stats-row" *ngIf="isEditing">
+              <div class="stat-item">
+                <mat-icon>movie</mat-icon>
+                <span><strong>{{ getVideoCount(editingId!) }}</strong> associated videos</span>
+              </div>
+            </div>
+
+            <!-- Tags Section (Only in Edit Mode) -->
+            <div class="tags-management" *ngIf="isEditing">
+              <h3>Allowed Tags</h3>
+              <p class="text-muted text-sm">Only these tags can be applied to videos in this category.</p>
+              
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of currentTags" [style.background-color]="tag.color" class="tag-chip" (removed)="removeTagFromCategory(editingId!, tag.id)">
+                  <span class="tag-text">{{tag.name}}</span>
+                  <button matChipRemove><mat-icon>cancel</mat-icon></button>
+                </mat-chip>
+              </mat-chip-set>
+              
+              <mat-form-field appearance="outline" class="full-width tag-select-field mt-3">
+                <mat-label>Add an existing tag</mat-label>
+                <mat-select (selectionChange)="addTagToCategory(editingId!, $event.value)">
+                  <mat-option *ngFor="let tag of availableTags" [value]="tag.id">
+                    <span class="tag-color-dot" [style.background-color]="tag.color"></span>
+                    {{tag.name}}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button mat-button type="button" (click)="cancelEdit()">Cancel</button>
+              <button mat-flat-button color="primary" type="submit" [disabled]="categoryForm.invalid">
+                {{ isEditing ? 'Save Changes' : 'Create Category' }}
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

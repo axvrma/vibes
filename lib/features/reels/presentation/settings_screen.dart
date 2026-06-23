@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../../core/config/settings_repository.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: const Text('Settings'),
           backgroundColor: const Color(0xFF0A0A0F),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: Colors.white, size: 24.0),
             onPressed: _saveAndPop,
           ),
         ),

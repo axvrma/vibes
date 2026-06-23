@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:video_player/video_player.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -22,6 +23,7 @@ class VideoFeedScreen extends StatefulWidget {
 }
 
 class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   VideoRepository _repository = ServerVideoRepository();
   List<VideoItem> _allVideos = [];
   List<VideoItem> _videos = [];
@@ -153,6 +155,58 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: Drawer(
+        backgroundColor: const Color(0xFF1A1A24),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                color: Color(0xFF0A0A0F),
+              ),
+              child: Text(
+                'vibes',
+                style: TextStyle(
+                  color: Color(0xFFE040FB),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -1,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const HugeIcon(icon: HugeIcons.strokeRoundedSettings01, color: Colors.white, size: 24.0),
+              title: const Text('Settings', style: TextStyle(color: Colors.white)),
+              onTap: () async {
+                Navigator.pop(context); // close drawer
+                final changed = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+                if (changed == true) {
+                  _initApp();
+                }
+              },
+            ),
+            ListTile(
+              leading: const HugeIcon(icon: HugeIcons.strokeRoundedLogout01, color: Colors.redAccent, size: 24.0),
+              title: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+              onTap: () async {
+                Navigator.pop(context); // close drawer
+                await AuthRepository().logout();
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           Container(color: const Color(0xFF0A0A0F)),
@@ -170,15 +224,36 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderSt
     
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 64),
-            const SizedBox(height: 16),
-            Text('Error: $_error', style: const TextStyle(color: Colors.white)),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadVideos, child: const Text('Retry'))
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const HugeIcon(icon: HugeIcons.strokeRoundedAlert01, color: Colors.red, size: 64.0),
+              const SizedBox(height: 16),
+              const Text('An error occurred while loading the feed.', style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _loadVideos, child: const Text('Retry')),
+              const SizedBox(height: 32),
+              Card(
+                color: Colors.white.withValues(alpha: 0.05),
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    iconColor: Colors.white,
+                    collapsedIconColor: Colors.white70,
+                    title: const Text('More details', style: TextStyle(color: Colors.white70)),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -218,45 +293,31 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderSt
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "vibes",
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFE040FB),
-                      letterSpacing: -1,
-                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedMenu01, color: Colors.white, size: 24.0),
+                        onPressed: () {
+                          _scaffoldKey.currentState?.openDrawer();
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "vibes",
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFE040FB),
+                          letterSpacing: -1,
+                        ),
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white),
-                        onPressed: () async {
-                          final changed = await Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                          );
-                          if (changed == true) {
-                            _initApp();
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedRefresh, color: Colors.white, size: 24.0),
                         onPressed: _loadVideos,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        onPressed: () async {
-                          await AuthRepository().logout();
-                          if (context.mounted) {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              (route) => false,
-                            );
-                          }
-                        },
                       ),
                     ],
                   ),
@@ -585,7 +646,36 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTicker
 
   Widget _buildErrorWidget() {
     return Center(
-      child: Text('Playback Error\n$_errorMessage', style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+      child: Container(
+        padding: const EdgeInsets.all(24.0),
+        color: Colors.black.withValues(alpha: 0.6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const HugeIcon(icon: HugeIcons.strokeRoundedAlert01, color: Colors.red, size: 48.0),
+            const SizedBox(height: 16),
+            const Text('Could not play this video.', style: TextStyle(color: Colors.white, fontSize: 16), textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.white.withValues(alpha: 0.05),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  iconColor: Colors.white,
+                  collapsedIconColor: Colors.white70,
+                  title: const Text('More details', style: TextStyle(color: Colors.white70)),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(_errorMessage, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -605,9 +695,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTicker
   Widget _buildPlayPauseOverlay() {
     if (!_showPlayPauseIcon) return const SizedBox.shrink();
     return Center(
-      child: Icon(
-        _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-        size: 80,
+      child: HugeIcon(
+        icon: _isPlaying ? HugeIcons.strokeRoundedPause : HugeIcons.strokeRoundedPlay,
+        size: 80.0,
         color: Colors.white.withValues(alpha: 0.7),
       ),
     );
@@ -620,9 +710,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTicker
       child: Column(
         children: [
           IconButton(
-            icon: Icon(_videoState.liked ? Icons.favorite : Icons.favorite_border),
-            color: _videoState.liked ? Colors.red : Colors.white,
-            iconSize: 36,
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedFavourite, 
+              color: _videoState.liked ? Colors.red : Colors.white, 
+              size: 36.0,
+            ),
             onPressed: _toggleLike,
           ),
           const SizedBox(height: 16),
@@ -630,14 +722,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTicker
             SizedBox(width: 24, height: 24, child: CircularProgressIndicator(value: _downloadProgress, color: Colors.white, strokeWidth: 2)),
           if (!_isDownloading && _cachedFile == null)
             IconButton(
-              icon: const Icon(Icons.download, color: Colors.white),
-              iconSize: 36,
+              icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload01, color: Colors.white, size: 36.0),
               onPressed: _downloadVideo,
             ),
           if (_cachedFile != null)
             IconButton(
-              icon: const Icon(Icons.offline_pin, color: Colors.green),
-              iconSize: 36,
+              icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle01, color: Colors.green, size: 36.0),
               onPressed: _removeDownload,
             ),
         ],

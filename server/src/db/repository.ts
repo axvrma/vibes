@@ -1,5 +1,15 @@
 import db from './index';
 
+export interface UserRecord {
+  id: string;
+  email: string;
+  role: string;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+  last_login_at: string;
+}
+
 export interface CategoryRecord {
   id: string;
   name: string;
@@ -247,6 +257,19 @@ export const stateRepo = {
         updated_at = excluded.updated_at
     `);
     return stmt.run(state);
+  }
+};
+
+export const userRepo = {
+  listAll: () => {
+    return db.prepare('SELECT id, email, role, is_active, created_at, updated_at, last_login_at FROM users ORDER BY created_at DESC').all() as UserRecord[];
+  },
+
+  updateStatus: (id: string, is_active: number) => {
+    db.prepare("UPDATE users SET is_active = ?, updated_at = datetime('now') WHERE id = ?").run(is_active, id);
+    if (is_active === 0) {
+      db.prepare("UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL").run(id);
+    }
   }
 };
 

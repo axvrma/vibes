@@ -272,10 +272,10 @@ router.get('/sessions', authenticate, requireActiveUser, (req, res) => {
     `;
     let params: any[] = [];
     if (!isAdmin) {
-      query += ` AND r.user_id = ?`;
+      query += ' AND r.user_id = ?';
       params.push(req.user!.id);
     }
-    query += ` ORDER BY u.email ASC, r.created_at DESC`;
+    query += ' ORDER BY u.email ASC, r.created_at DESC';
     
     const sessions = db.prepare(query).all(...params);
     res.json({ sessions });

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { upload } from '../middleware/upload';
-import { videoRepo, tagRepo, stateRepo, categoryRepo } from '../db/repository';
+import { videoRepo, tagRepo, stateRepo, categoryRepo, userRepo } from '../db/repository';
 import { inspectVideo, generateThumbnail, cleanupFailedProcessing } from '../services/media-processor';
 import { AppError } from '../middleware/error-handler';
 import path from 'path';
@@ -433,6 +433,29 @@ router.put('/videos/:id/state', (req, res, next) => {
       progress_seconds: progress_seconds || 0,
       updated_at: new Date().toISOString()
     });
+    res.status(200).json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Users
+router.get('/users', requireAdmin, (req, res) => {
+  res.json(userRepo.listAll());
+});
+
+router.patch('/users/:id/status', requireAdmin, (req, res, next) => {
+  const { is_active } = req.body;
+  if (typeof is_active !== 'number') {
+    return next(new AppError('INVALID_INPUT', 'is_active must be a number (0 or 1)'));
+  }
+  
+  if (req.user?.id === req.params.id) {
+    return next(new AppError('FORBIDDEN', 'Cannot change your own status', 403));
+  }
+
+  try {
+    userRepo.updateStatus(req.params.id, is_active);
     res.status(200).json({ success: true });
   } catch (err) {
     next(err);
