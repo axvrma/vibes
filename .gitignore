@@ -53,3 +53,6 @@ app.*.map.json
 /dashboard/.env
 /server/node_modules/
 /dashboard/node_modules/
+/server/dist/
+/dashboard/dist/
+/dashboard/.angular/

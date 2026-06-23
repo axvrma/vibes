@@ -79,7 +79,7 @@ router.post('/upload', requireAdmin, upload.single('video'), async (req, res, ne
   }
 
   // categoryId is no longer used, videos are categorized by tags
-  const categoryId = null;
+  const categoryId = undefined;
 
   const id = uuidv4();
   const storageKey = req.file.filename;
