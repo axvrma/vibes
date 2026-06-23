@@ -8,9 +8,6 @@
       <button mat-flat-button color="primary" (click)="openUploadDialog()">
         <mat-icon>upload</mat-icon> Upload video
       </button>
-      <button mat-stroked-button routerLink="/dashboard/categories" class="hide-on-mobile">
-        <mat-icon>folder_managed</mat-icon> Manage categories
-      </button>
     </div>
   </header>
 
@@ -138,6 +135,10 @@
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="updateTags(element)">
+                <mat-icon>label</mat-icon>
+                <span>Manage Tags</span>
+              </button>
               <button mat-menu-item (click)="deleteVideo(element)" class="error-text">
                 <mat-icon color="warn">delete</mat-icon>
                 <span>Delete</span>
@@ -178,6 +179,10 @@
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #mobileMenu="matMenu">
+            <button mat-menu-item (click)="updateTags(element)">
+              <mat-icon>label</mat-icon>
+              <span>Manage Tags</span>
+            </button>
             <button mat-menu-item (click)="deleteVideo(element)" class="error-text">
               <mat-icon color="warn">delete</mat-icon>
               <span>Delete</span>

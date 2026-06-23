@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { forkJoin, Observable } from 'rxjs';
 import { MediaApiService } from '../services/media-api.service';
 
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +20,7 @@ import { MetricCardComponent } from '../shared/components/metric-card.component'
 import { UploadDialogComponent } from '../shared/components/upload-dialog.component';
 import { ConfirmDeleteDialogComponent } from '../shared/components/confirm-delete-dialog.component';
 import { VideoPlayerDialogComponent } from '../shared/components/video-player-dialog.component';
+import { UpdateTagsDialogComponent } from '../shared/components/update-tags-dialog.component';
 
 import { AuthService } from '../services/auth.service';
 
@@ -176,6 +178,50 @@ export class DashboardPage implements OnInit {
 
   removeTagFromVideo(videoId: string, tagId: string) {
     this.api.detachTag(videoId, tagId).subscribe(() => this.loadVideos());
+  }
+
+  updateTags(video: Video) {
+    const dialogRef = this.dialog.open(UpdateTagsDialogComponent, {
+      width: '400px',
+      data: {
+        videoId: video.id,
+        currentTags: video.tags,
+        availableTags: this.availableTags
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(selectedTags => {
+      if (!selectedTags) return; // User cancelled
+      
+      const currentTagIds = (video.tags || []).map(t => t.id);
+      const newTagIds = selectedTags as string[];
+      
+      const tagsToAdd = newTagIds.filter(id => !currentTagIds.includes(id));
+      const tagsToRemove = currentTagIds.filter(id => !newTagIds.includes(id));
+      
+      const requests: Observable<any>[] = [];
+      
+      tagsToAdd.forEach(id => {
+        requests.push(this.api.attachTag(video.id, id));
+      });
+      
+      tagsToRemove.forEach(id => {
+        requests.push(this.api.detachTag(video.id, id));
+      });
+      
+      if (requests.length > 0) {
+        forkJoin(requests).subscribe({
+          next: () => {
+            this.snackBar.open('Tags updated successfully.', 'Close', { duration: 3000 });
+            this.loadVideos();
+          },
+          error: () => {
+            this.snackBar.open('Failed to update tags.', 'Close', { duration: 3000 });
+            this.loadVideos();
+          }
+        });
+      }
+    });
   }
 
   formatBytes(bytes: number) {
