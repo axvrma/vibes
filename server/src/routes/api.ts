@@ -70,6 +70,13 @@ router.get('/videos', (req, res) => {
     updatedAt: v.updated_at
   }));
 
+  if (req.user?.role !== 'admin') {
+    for (let i = manifest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [manifest[i], manifest[j]] = [manifest[j], manifest[i]];
+    }
+  }
+
   res.json({ videos: manifest });
 });
 
