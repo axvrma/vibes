@@ -29,29 +29,37 @@ import { MediaApiService } from '../../services/media-api.service';
       <form [formGroup]="uploadForm" class="upload-form">
         <div 
           class="file-drop-zone" 
-          [class.has-file]="!!selectedFile"
+          [class.has-file]="selectedFiles.length > 0"
           (click)="fileInput.click()"
           (dragover)="onDragOver($event)"
           (drop)="onDrop($event)"
           (dragleave)="onDragLeave($event)"
         >
-          <input type="file" #fileInput (change)="onFileSelected($event)" accept="video/mp4" style="display: none;" />
+          <input type="file" #fileInput (change)="onFileSelected($event)" accept="video/mp4" multiple style="display: none;" />
           
-          <ng-container *ngIf="!selectedFile">
+          <ng-container *ngIf="selectedFiles.length === 0">
             <mat-icon class="upload-icon">cloud_upload</mat-icon>
-            <p class="drop-text">Drag and drop MP4 file here or click to browse</p>
+            <p class="drop-text">Drag and drop MP4 files here or click to browse</p>
             <p class="limit-text">Max file size depends on server limits</p>
           </ng-container>
 
-          <ng-container *ngIf="selectedFile">
-            <mat-icon class="upload-icon success">check_circle</mat-icon>
-            <p class="file-name">{{ selectedFile.name }}</p>
-            <p class="file-size">{{ formatBytes(selectedFile.size) }}</p>
-            <button mat-button color="warn" (click)="clearFile($event)" [disabled]="isUploading">Remove File</button>
+          <ng-container *ngIf="selectedFiles.length > 0">
+            <div class="file-list">
+              <div class="file-item" *ngFor="let file of selectedFiles; let i = index">
+                <mat-icon class="success">check_circle</mat-icon>
+                <div class="file-info">
+                  <span class="file-name" [title]="file.name">{{ file.name }}</span>
+                  <span class="file-size">{{ formatBytes(file.size) }}</span>
+                </div>
+                <button mat-icon-button color="warn" (click)="removeFile(i, $event)" [disabled]="isUploading">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
           </ng-container>
         </div>
         
-        <mat-form-field appearance="outline" class="full-width mt-3">
+        <mat-form-field appearance="outline" class="full-width mt-3" *ngIf="selectedFiles.length <= 1">
           <mat-label>Title (optional)</mat-label>
           <input matInput formControlName="title" placeholder="Extracted from filename if empty">
         </mat-form-field>
@@ -68,7 +76,7 @@ import { MediaApiService } from '../../services/media-api.service';
         
         <div *ngIf="isUploading" class="progress-section">
           <div class="progress-header">
-            <span>Uploading...</span>
+            <span>Uploading {{ currentUploadIndex + 1 }} of {{ selectedFiles.length }}...</span>
             <span>{{uploadProgress}}%</span>
           </div>
           <mat-progress-bar mode="determinate" [value]="uploadProgress"></mat-progress-bar>
@@ -77,8 +85,8 @@ import { MediaApiService } from '../../services/media-api.service';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close [disabled]="isUploading">Cancel</button>
-      <button mat-flat-button color="primary" (click)="onUpload()" [disabled]="uploadForm.invalid || !selectedFile || isUploading">
-        <mat-icon>upload</mat-icon> Upload
+      <button mat-flat-button color="primary" (click)="onUpload()" [disabled]="uploadForm.invalid || selectedFiles.length === 0 || isUploading">
+        <mat-icon>upload</mat-icon> Upload {{ selectedFiles.length > 1 ? selectedFiles.length + ' Files' : '' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -137,12 +145,46 @@ import { MediaApiService } from '../../services/media-api.service';
       margin: 0;
     }
 
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      background: var(--app-surface);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--app-outline-variant);
+    }
+
+    .file-item mat-icon.success {
+      margin-right: 12px;
+      margin-bottom: 0;
+      width: 24px;
+      height: 24px;
+      font-size: 24px;
+    }
+
+    .file-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
     .file-name {
       font-size: 14px;
       font-weight: 500;
       color: var(--app-text-primary);
-      margin: 0 0 4px 0;
-      word-break: break-all;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .full-width {
@@ -185,8 +227,9 @@ export class UploadDialogComponent {
     tags: [[] as string[]]
   });
   
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   isUploading = false;
+  currentUploadIndex = 0;
   uploadProgress = 0;
 
   constructor(
@@ -195,9 +238,9 @@ export class UploadDialogComponent {
   ) {}
 
   onFileSelected(event: any) {
-    const file = event.target.files[0];
-    if (file) {
-      this.selectedFile = file;
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      this.addFiles(Array.from(files));
     }
   }
 
@@ -222,49 +265,71 @@ export class UploadDialogComponent {
     target.classList.remove('drag-over');
     
     if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-      const file = event.dataTransfer.files[0];
-      if (file.type === 'video/mp4') {
-        this.selectedFile = file;
-      } else {
-        this.snackBar.open('Please select an MP4 file', 'Close', { duration: 3000 });
-      }
+      this.addFiles(Array.from(event.dataTransfer.files));
     }
   }
 
-  clearFile(event: Event) {
-    event.stopPropagation();
-    this.selectedFile = null;
-    this.uploadProgress = 0;
+  addFiles(files: File[]) {
+    let hasInvalid = false;
+    for (const file of files) {
+      if (file.type === 'video/mp4') {
+        this.selectedFiles.push(file);
+      } else {
+        hasInvalid = true;
+      }
+    }
+    if (hasInvalid) {
+      this.snackBar.open('Some files were ignored because they are not MP4', 'Close', { duration: 3000 });
+    }
   }
 
-  onUpload() {
-    if (!this.selectedFile || this.uploadForm.invalid) return;
+  removeFile(index: number, event: Event) {
+    event.stopPropagation();
+    this.selectedFiles.splice(index, 1);
+  }
+
+  async onUpload() {
+    if (this.selectedFiles.length === 0 || this.uploadForm.invalid) return;
     this.isUploading = true;
-    this.uploadProgress = 0;
 
-    const fd = new FormData();
-    fd.append('video', this.selectedFile);
-    
-    const formVals = this.uploadForm.value;
-    if (formVals.title) fd.append('title', formVals.title);
-    if (formVals.tags && formVals.tags.length > 0) fd.append('tags', JSON.stringify(formVals.tags));
+    for (let i = 0; i < this.selectedFiles.length; i++) {
+      this.currentUploadIndex = i;
+      this.uploadProgress = 0;
+      await this.uploadSingleFile(this.selectedFiles[i]);
+    }
 
-    this.api.uploadVideo(fd).subscribe({
-      next: (event: any) => {
-        if (event.type === HttpEventType.UploadProgress) {
-          this.uploadProgress = Math.round(100 * event.loaded / event.total);
-        } else if (event.type === HttpEventType.Response) {
-          this.isUploading = false;
-          this.snackBar.open('Upload successful!', 'Close', { duration: 3000 });
-          this.dialogRef.close(true); // Return true to indicate success
-        }
-      },
-      error: (err) => {
-        this.isUploading = false;
-        this.uploadProgress = 0;
-        const msg = err.error?.error?.message || err.message;
-        this.snackBar.open(`Upload failed: ${msg}`, 'Close', { duration: 5000 });
+    this.isUploading = false;
+    this.snackBar.open('Uploads completed!', 'Close', { duration: 3000 });
+    this.dialogRef.close(true); // Return true to indicate success
+  }
+
+  uploadSingleFile(file: File): Promise<void> {
+    return new Promise((resolve) => {
+      const fd = new FormData();
+      fd.append('video', file);
+      
+      const formVals = this.uploadForm.value;
+      if (this.selectedFiles.length === 1 && formVals.title) {
+        fd.append('title', formVals.title);
       }
+      if (formVals.tags && formVals.tags.length > 0) {
+        fd.append('tags', JSON.stringify(formVals.tags));
+      }
+
+      this.api.uploadVideo(fd).subscribe({
+        next: (event: any) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            this.uploadProgress = Math.round(100 * event.loaded / event.total);
+          } else if (event.type === HttpEventType.Response) {
+            resolve();
+          }
+        },
+        error: (err) => {
+          const msg = err.error?.error?.message || err.message;
+          this.snackBar.open(`Upload failed for ${file.name}: ${msg}`, 'Close', { duration: 5000 });
+          resolve(); // Continue to next file even if one fails
+        }
+      });
     });
   }
 
