@@ -6,7 +6,7 @@ services:
       context: ../server
       dockerfile: ../infra/server.Dockerfile
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - vibes_data:/app/data
     environment:
@@ -23,7 +23,7 @@ services:
       context: ../dashboard
       dockerfile: ../infra/dashboard.Dockerfile
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     depends_on:
       - server
     restart: unless-stopped
