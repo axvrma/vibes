@@ -43,6 +43,7 @@ app.*.map.json
 /app/android/app/debug
 /app/android/app/profile
 /app/android/app/release
+/app/android/build/
 
 /data/*
 !/data/.gitignore
