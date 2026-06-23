@@ -72,16 +72,18 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderSt
     
     try {
       final settings = SettingsRepository();
-      final dio = Dio();
-      final token = await AuthRepository().getAccessToken();
-      if (token != null) {
-        dio.options.headers['Authorization'] = 'Bearer $token';
+      List<String> categories = ['All'];
+      if (!settings.isLocalMode) {
+        final dio = Dio();
+        final token = await AuthRepository().getAccessToken();
+        if (token != null) {
+          dio.options.headers['Authorization'] = 'Bearer $token';
+        }
+        
+        final catsRes = await dio.get('${settings.serverUrl}/categories');
+        final List catsJson = catsRes.data;
+        categories.addAll(catsJson.map((c) => c['name'].toString()));
       }
-      
-      final catsRes = await dio.get('${settings.serverUrl}/categories');
-      final List catsJson = catsRes.data;
-      final categories = catsJson.map((c) => c['name'].toString()).toList();
-      categories.insert(0, 'All');
 
       final videos = await _repository.getVideos();
       videos.shuffle();
@@ -324,7 +326,7 @@ class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderSt
                 ],
               ),
             ),
-            if (_categories.length > 1)
+            if (!SettingsRepository().isLocalMode && _categories.length > 1)
               SizedBox(
                 height: 40,
                 child: ListView.builder(
@@ -704,6 +706,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTicker
   }
 
   Widget _buildSideActions() {
+    if (SettingsRepository().isLocalMode) {
+      return const SizedBox.shrink();
+    }
     return Positioned(
       right: 16,
       bottom: 140,
