@@ -1,0 +1,20 @@
+<div class="app-layout">
+  <header class="app-header" *ngIf="auth.user$ | async as user">
+    <div class="brand">
+      <span class="title">Vibes Admin</span>
+      <nav class="nav-links">
+        <a routerLink="/dashboard" routerLinkActive="active">Videos</a>
+        <a routerLink="/dashboard/categories" routerLinkActive="active">Categories</a>
+        <a routerLink="/dashboard/tags" routerLinkActive="active">Tags</a>
+      </nav>
+    </div>
+    <div class="user-menu">
+      <span class="user-email">{{ user.email }} ({{ user.role }})</span>
+      <button mat-button (click)="logout()">Logout</button>
+      <button mat-button color="warn" (click)="logoutAll()">Logout All Devices</button>
+    </div>
+  </header>
+  <main class="app-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

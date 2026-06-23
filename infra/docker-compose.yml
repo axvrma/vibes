@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ../server
+      dockerfile: ../infra/server.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - vibes_data:/app/data
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+      - DATABASE_PATH=/app/data/sqlite.db
+      - MAX_UPLOAD_MB=1024
+      - CORS_ORIGIN=*
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ../dashboard
+      dockerfile: ../infra/dashboard.Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+volumes:
+  vibes_data:
+    driver: local

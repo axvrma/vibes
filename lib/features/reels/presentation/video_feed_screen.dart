@@ -1,0 +1,678 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import '../../../core/config/settings_repository.dart';
+import '../domain/video_item.dart';
+import '../domain/video_repository.dart';
+import '../data/server_video_repository.dart';
+import '../data/local_video_repository.dart';
+import '../domain/video_state.dart';
+import 'settings_screen.dart';
+import 'package:dio/dio.dart';
+import '../../auth/data/auth_repository.dart';
+import '../../auth/presentation/login_screen.dart';
+class VideoFeedScreen extends StatefulWidget {
+  const VideoFeedScreen({super.key});
+
+  @override
+  State<VideoFeedScreen> createState() => _VideoFeedScreenState();
+}
+
+class _VideoFeedScreenState extends State<VideoFeedScreen> with TickerProviderStateMixin {
+  VideoRepository _repository = ServerVideoRepository();
+  List<VideoItem> _allVideos = [];
+  List<VideoItem> _videos = [];
+  List<String> _categories = ['All'];
+  String _selectedCategory = 'All';
+  bool _isLoading = true;
+  String? _error;
+  
+  final PageController _pageController = PageController();
+  int _currentIndex = 0;
+  
+  late AnimationController _pulseController;
+  final Box box = Hive.box('videoData');
+
+  @override
+  void initState() {
+    super.initState();
+    WakelockPlus.enable();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    
+    _initApp();
+  }
+  
+  Future<void> _initApp() async {
+    final settings = SettingsRepository();
+    if (settings.isLocalMode) {
+      _repository = LocalVideoRepository();
+    } else {
+      _repository = ServerVideoRepository();
+    }
+    
+    if (_repository is ServerVideoRepository) {
+      await (_repository as ServerVideoRepository).cleanStaleFiles();
+    }
+    _loadVideos();
+  }
+
+  Future<void> _loadVideos() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    
+    try {
+      final settings = SettingsRepository();
+      final dio = Dio();
+      final token = await AuthRepository().getAccessToken();
+      if (token != null) {
+        dio.options.headers['Authorization'] = 'Bearer $token';
+      }
+      
+      final catsRes = await dio.get('${settings.serverUrl}/categories');
+      final List catsJson = catsRes.data;
+      final categories = catsJson.map((c) => c['name'].toString()).toList();
+      categories.insert(0, 'All');
+
+      final videos = await _repository.getVideos();
+      videos.shuffle();
+      setState(() {
+        _allVideos = videos;
+        _categories = categories;
+        _isLoading = false;
+        _applyCategoryFilter();
+      });
+      _syncPendingStates();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _applyCategoryFilter() {
+    setState(() {
+      if (_selectedCategory == 'All') {
+        _videos = _allVideos;
+      } else {
+        _videos = _allVideos.where((v) => v.category?.name == _selectedCategory).toList();
+      }
+      _currentIndex = 0;
+      if (_videos.isNotEmpty && _pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
+    });
+  }
+  
+  Future<void> _syncPendingStates() async {
+    final settings = SettingsRepository();
+    if (settings.isLocalMode) return;
+    
+    // Basic offline sync logic: sync any states saved while offline
+    final dio = Dio();
+    for (var key in box.keys) {
+      if (key.toString().endsWith('_state')) {
+        final stateJson = box.get(key);
+        if (stateJson != null && stateJson['syncPending'] == true) {
+          try {
+            await dio.put(
+              '${settings.serverUrl}/videos/${stateJson['videoId']}/state',
+              data: {
+                'liked': stateJson['liked'],
+                'note': stateJson['note'],
+                'progress_seconds': stateJson['progressSeconds'],
+              }
+            );
+            // Mark synced
+            stateJson['syncPending'] = false;
+            box.put(key, stateJson);
+          } catch (e) {
+            // Ignore, will retry next time
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WakelockPlus.disable();
+    _pageController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(color: const Color(0xFF0A0A0F)),
+          _buildBody(),
+          _buildTopBar(),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFE040FB)));
+    }
+    
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 64),
+            const SizedBox(height: 16),
+            Text('Error: $_error', style: const TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: _loadVideos, child: const Text('Retry'))
+          ],
+        ),
+      );
+    }
+    
+    if (_videos.isEmpty) {
+      return const Center(
+        child: Text('No videos available on the server.', style: TextStyle(color: Colors.white, fontSize: 18)),
+      );
+    }
+
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: Axis.vertical,
+      onPageChanged: (idx) => setState(() => _currentIndex = idx),
+      itemCount: _videos.length,
+      itemBuilder: (context, index) {
+        return VideoPlayerScreen(
+          key: ValueKey(_videos[index].id),
+          video: _videos[index],
+          repository: _repository,
+        );
+      },
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "vibes",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE040FB),
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.settings, color: Colors.white),
+                        onPressed: () async {
+                          final changed = await Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                          );
+                          if (changed == true) {
+                            _initApp();
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        onPressed: _loadVideos,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, color: Colors.white),
+                        onPressed: () async {
+                          await AuthRepository().logout();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              (route) => false,
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (_categories.length > 1)
+              SizedBox(
+                height: 40,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _categories.length,
+                  itemBuilder: (context, index) {
+                    final category = _categories[index];
+                    final isSelected = category == _selectedCategory;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(category),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected && _selectedCategory != category) {
+                            setState(() {
+                              _selectedCategory = category;
+                              _applyCategoryFilter();
+                            });
+                          }
+                        },
+                        selectedColor: const Color(0xFFE040FB),
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  final VideoItem video;
+  final VideoRepository repository;
+
+  const VideoPlayerScreen({
+    super.key,
+    required this.video,
+    required this.repository,
+  });
+
+  @override
+  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> with SingleTickerProviderStateMixin {
+  VideoPlayerController? _controller;
+  bool _isPlaying = false;
+  bool _hasError = false;
+  String _errorMessage = '';
+  File? _cachedFile;
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  
+  late VideoState _videoState;
+  final Box box = Hive.box('videoData');
+  late AnimationController _likeAnimController;
+  bool _showPlayPauseIcon = false;
+  String? _stateKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _videoState = VideoState(
+      videoId: widget.video.id,
+      updatedAt: DateTime.now(),
+    );
+    _likeAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _loadState();
+    _initializeVideo();
+  }
+
+  void _loadState() async {
+    final authRepo = AuthRepository();
+    final userId = await authRepo.getUserId() ?? 'unknown';
+    _stateKey = '${userId}_${widget.video.id}_state';
+
+    final stateJson = box.get(_stateKey);
+    if (stateJson != null) {
+      if (mounted) {
+        setState(() {
+          _videoState = VideoState(
+            videoId: widget.video.id,
+            liked: stateJson['liked'],
+            note: stateJson['note'],
+            progressSeconds: stateJson['progressSeconds'],
+            updatedAt: DateTime.parse(stateJson['updatedAt']),
+            syncPending: stateJson['syncPending'],
+          );
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _videoState = VideoState(
+            videoId: widget.video.id,
+            updatedAt: DateTime.now(),
+          );
+        });
+      }
+    }
+  }
+
+  void _saveState() {
+    if (_stateKey == null) return;
+    _videoState = _videoState.copyWith(
+      updatedAt: DateTime.now(),
+      syncPending: true,
+    );
+    
+    box.put(_stateKey, {
+      'videoId': _videoState.videoId,
+      'liked': _videoState.liked,
+      'note': _videoState.note,
+      'progressSeconds': _videoState.progressSeconds,
+      'updatedAt': _videoState.updatedAt.toIso8601String(),
+      'syncPending': _videoState.syncPending,
+    });
+    
+    // Attempt async save to API
+    final settings = SettingsRepository();
+    if (!settings.isLocalMode) {
+      widget.repository.saveProgress(widget.video.id, _videoState.progressSeconds);
+      widget.repository.saveNote(widget.video.id, _videoState.note);
+      if (_videoState.liked) {
+        widget.repository.likeVideo(widget.video.id);
+      } else {
+        widget.repository.unlikeVideo(widget.video.id);
+      }
+      
+      _videoState = _videoState.copyWith(syncPending: false);
+      box.put(_stateKey, {
+        'videoId': _videoState.videoId,
+        'liked': _videoState.liked,
+        'note': _videoState.note,
+        'progressSeconds': _videoState.progressSeconds,
+        'updatedAt': _videoState.updatedAt.toIso8601String(),
+        'syncPending': _videoState.syncPending,
+      });
+    }
+  }
+
+  Future<void> _initializeVideo() async {
+    _cachedFile = await widget.repository.getCachedVideo(widget.video.id);
+    
+    if (_cachedFile != null) {
+      _controller = VideoPlayerController.file(_cachedFile!);
+    } else {
+      if (widget.video.streamUrl.scheme == 'file') {
+        _controller = VideoPlayerController.file(File(widget.video.streamUrl.toFilePath()));
+      } else {
+        final token = await AuthRepository().getAccessToken();
+        final headers = <String, String>{};
+        if (token != null) {
+          headers['Authorization'] = 'Bearer $token';
+        }
+        _controller = VideoPlayerController.networkUrl(
+          widget.video.streamUrl,
+          httpHeaders: headers,
+        );
+      }
+    }
+
+    _controller!.addListener(_videoListener);
+
+    try {
+      await _controller!.initialize();
+      if (mounted) {
+        setState(() => _isPlaying = true);
+        _controller!.setLooping(true);
+        if (_videoState.progressSeconds > 0 && _videoState.progressSeconds < _controller!.value.duration.inSeconds) {
+          await _controller!.seekTo(Duration(seconds: _videoState.progressSeconds.toInt()));
+        }
+        _controller!.play();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  void _videoListener() {
+    if (mounted && _controller != null) {
+      final isPlaying = _controller!.value.isPlaying;
+      if (isPlaying != _isPlaying) {
+        setState(() => _isPlaying = isPlaying);
+      }
+
+      if (_controller!.value.hasError && !_hasError) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = _controller!.value.errorDescription ?? 'Playback error';
+        });
+      }
+      
+      // Save progress periodically
+      if (_isPlaying && _controller!.value.position.inSeconds % 5 == 0) {
+        _videoState = _videoState.copyWith(progressSeconds: _controller!.value.position.inSeconds.toDouble());
+        _saveState();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_videoListener);
+    _controller?.dispose();
+    _likeAnimController.dispose();
+    super.dispose();
+  }
+
+  void _togglePlayPause() {
+    if (_hasError || _controller == null) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      _showPlayPauseIcon = true;
+      if (_controller!.value.isPlaying) {
+        _controller!.pause();
+      } else {
+        _controller!.play();
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) setState(() => _showPlayPauseIcon = false);
+    });
+  }
+
+  void _toggleLike() {
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _videoState = _videoState.copyWith(liked: !_videoState.liked);
+    });
+    _saveState();
+    
+    if (_videoState.liked) {
+      _likeAnimController.forward().then((_) => _likeAnimController.reverse());
+    }
+  }
+
+  Future<void> _downloadVideo() async {
+    if (_cachedFile != null || _isDownloading) return;
+    
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+    });
+
+    try {
+      final file = await widget.repository.downloadVideo(widget.video, onReceiveProgress: (received, total) {
+        if (total != -1 && mounted) {
+          setState(() {
+            _downloadProgress = received / total;
+          });
+        }
+      });
+      if (mounted) {
+        setState(() {
+          _cachedFile = file;
+          _isDownloading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Downloaded successfully for offline playback')));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      }
+    }
+  }
+  
+  Future<void> _removeDownload() async {
+    await widget.repository.deleteCachedVideo(widget.video.id);
+    setState(() {
+      _cachedFile = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (_hasError) _buildErrorWidget()
+        else if (_controller == null || !_controller!.value.isInitialized) _buildLoadingWidget()
+        else _buildVideoPlayer(),
+        
+        _buildPlayPauseOverlay(),
+        _buildSideActions(),
+        _buildVideoInfo(),
+      ],
+    );
+  }
+
+  Widget _buildLoadingWidget() {
+    return Center(child: CircularProgressIndicator(color: const Color(0xFFE040FB)));
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Text('Playback Error\n$_errorMessage', style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    return GestureDetector(
+      onTap: _togglePlayPause,
+      onDoubleTap: _toggleLike,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: _controller!.value.aspectRatio,
+          child: VideoPlayer(_controller!),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildPlayPauseOverlay() {
+    if (!_showPlayPauseIcon) return const SizedBox.shrink();
+    return Center(
+      child: Icon(
+        _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+        size: 80,
+        color: Colors.white.withValues(alpha: 0.7),
+      ),
+    );
+  }
+
+  Widget _buildSideActions() {
+    return Positioned(
+      right: 16,
+      bottom: 140,
+      child: Column(
+        children: [
+          IconButton(
+            icon: Icon(_videoState.liked ? Icons.favorite : Icons.favorite_border),
+            color: _videoState.liked ? Colors.red : Colors.white,
+            iconSize: 36,
+            onPressed: _toggleLike,
+          ),
+          const SizedBox(height: 16),
+          if (_isDownloading)
+            SizedBox(width: 24, height: 24, child: CircularProgressIndicator(value: _downloadProgress, color: Colors.white, strokeWidth: 2)),
+          if (!_isDownloading && _cachedFile == null)
+            IconButton(
+              icon: const Icon(Icons.download, color: Colors.white),
+              iconSize: 36,
+              onPressed: _downloadVideo,
+            ),
+          if (_cachedFile != null)
+            IconButton(
+              icon: const Icon(Icons.offline_pin, color: Colors.green),
+              iconSize: 36,
+              onPressed: _removeDownload,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoInfo() {
+    return Positioned(
+      left: 16,
+      bottom: 40,
+      right: 80,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.video.title,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: widget.video.tags.map((t) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Color(int.parse(t.color.replaceFirst('#', '0xFF'))),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(t.name, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}

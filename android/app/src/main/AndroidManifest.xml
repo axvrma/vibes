@@ -6,6 +6,7 @@
         android:label="Vibes"
         android:name="${applicationName}"
         android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"
         android:icon="@mipmap/launcher_icon">
         <uses-library android:name="org.apache.http.legacy" android:required="false"/>
         <activity
