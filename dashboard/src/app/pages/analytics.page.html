@@ -1,0 +1,137 @@
+<div class="page-container">
+  <header class="page-header">
+    <div class="header-text">
+      <h1>Analytics</h1>
+      <p class="subtitle">Platform engagement and storage statistics</p>
+    </div>
+    <div class="header-actions">
+      <button mat-flat-button color="primary" (click)="loadData()">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading analytics...</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading && summary">
+    <!-- Top Level Metrics -->
+    <div class="summary-grid">
+      <app-metric-card 
+        title="Total Active Users" 
+        [value]="summary.totalUsers" 
+        icon="people" 
+        colorClass="info">
+      </app-metric-card>
+      
+      <app-metric-card 
+        title="Total Watch Time" 
+        [value]="formatDuration(summary.totalWatchTime)" 
+        icon="schedule" 
+        colorClass="primary">
+      </app-metric-card>
+
+      <app-metric-card 
+        title="Total Likes" 
+        [value]="summary.totalLikes" 
+        icon="favorite" 
+        colorClass="tertiary">
+      </app-metric-card>
+
+      <app-metric-card 
+        title="Total Storage Used" 
+        [value]="formatBytes(summary.totalSizeBytes)" 
+        icon="storage" 
+        colorClass="secondary">
+      </app-metric-card>
+      
+      <app-metric-card 
+        title="Total Videos" 
+        [value]="summary.totalVideos" 
+        icon="movie" 
+        colorClass="info">
+      </app-metric-card>
+    </div>
+
+    <!-- Leaderboards -->
+    <div class="leaderboard-container mt-4">
+      <!-- Top Watched Videos -->
+      <mat-card class="table-card">
+        <mat-card-header class="table-header">
+          <mat-card-title>
+            <mat-icon color="primary" class="mr-2">trending_up</mat-icon> 
+            Most Watched Reels
+          </mat-card-title>
+        </mat-card-header>
+        
+        <table mat-table [dataSource]="summary.topWatched" class="mat-elevation-z0">
+          <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef> Video </th>
+            <td mat-cell *matCellDef="let element">
+              <div class="title-cell">
+                <strong>{{element.title || 'Untitled'}}</strong>
+                <span class="filename text-muted">{{element.original_filename}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="watchTime">
+            <th mat-header-cell *matHeaderCellDef> Watch Time </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="highlight-text">{{ formatDuration(element.total_watch_time) }}</span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsWatched"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsWatched;"></tr>
+          
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-cell" [attr.colspan]="displayedColumnsWatched.length">
+              No watch data available yet.
+            </td>
+          </tr>
+        </table>
+      </mat-card>
+
+      <!-- Most Liked Videos -->
+      <mat-card class="table-card">
+        <mat-card-header class="table-header">
+          <mat-card-title>
+            <mat-icon color="warn" class="mr-2">favorite</mat-icon> 
+            Most Liked Reels
+          </mat-card-title>
+        </mat-card-header>
+        
+        <table mat-table [dataSource]="summary.topLiked" class="mat-elevation-z0">
+          <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef> Video </th>
+            <td mat-cell *matCellDef="let element">
+              <div class="title-cell">
+                <strong>{{element.title || 'Untitled'}}</strong>
+                <span class="filename text-muted">{{element.original_filename}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="likes">
+            <th mat-header-cell *matHeaderCellDef> Likes </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="highlight-text">{{ element.likes || 0 }}</span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsLiked"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsLiked;"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-cell" [attr.colspan]="displayedColumnsLiked.length">
+              No likes data available yet.
+            </td>
+          </tr>
+        </table>
+      </mat-card>
+    </div>
+  </ng-container>
+</div>

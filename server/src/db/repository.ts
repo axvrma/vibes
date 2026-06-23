@@ -192,12 +192,20 @@ export const videoRepo = {
     const totalVideosRow = db.prepare('SELECT COUNT(*) as c, SUM(size_bytes) as s FROM videos WHERE deleted_at IS NULL').get() as { c: number, s: number };
     const totalTagsRow = db.prepare('SELECT COUNT(*) as c FROM tags').get() as { c: number };
     const statsRow = db.prepare('SELECT SUM(liked) as totalLikes, SUM(progress_seconds) as totalWatchTime FROM user_video_state').get() as { totalLikes: number, totalWatchTime: number };
+    const totalUsersRow = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_active = 1').get() as { c: number };
+    
+    const topWatched = db.prepare('SELECT v.id, v.title, v.original_filename, SUM(s.progress_seconds) as total_watch_time FROM videos v JOIN user_video_state s ON v.id = s.video_id WHERE v.deleted_at IS NULL GROUP BY v.id ORDER BY total_watch_time DESC LIMIT 5').all();
+    const topLiked = db.prepare('SELECT v.id, v.title, v.original_filename, SUM(s.liked) as likes FROM videos v JOIN user_video_state s ON v.id = s.video_id WHERE v.deleted_at IS NULL GROUP BY v.id ORDER BY likes DESC LIMIT 5').all();
+
     return {
       totalVideos: totalVideosRow.c,
       totalSizeBytes: totalVideosRow.s || 0,
       totalTags: totalTagsRow.c,
       totalLikes: statsRow.totalLikes || 0,
-      totalWatchTime: statsRow.totalWatchTime || 0
+      totalWatchTime: statsRow.totalWatchTime || 0,
+      totalUsers: totalUsersRow.c,
+      topWatched,
+      topLiked
     };
   }
 };

@@ -28,6 +28,10 @@
           <mat-icon matListItemIcon>people</mat-icon>
           <div matListItemTitle>Users</div>
         </a>
+        <a mat-list-item routerLink="/dashboard/analytics" routerLinkActive="active-nav-item" *ngIf="user.role === 'admin'">
+          <mat-icon matListItemIcon>analytics</mat-icon>
+          <div matListItemTitle>Analytics</div>
+        </a>
         <mat-divider></mat-divider>
         <div class="user-info-bottom">
           <div class="user-details">
