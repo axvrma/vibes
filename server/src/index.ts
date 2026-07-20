@@ -56,7 +56,7 @@ import { errorHandler } from './middleware/error-handler';
 
 app.use('/api', apiRoutes);
 
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
