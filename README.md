@@ -32,8 +32,10 @@ The easiest way to get the backend and dashboard running is using the provided D
    ```
 2. Build and start the containers:
    ```bash
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
+
+The Compose project (stack) is named `vibes`, with containers named `vibes-server-1` and `vibes-dashboard-1`.
 
 **Services started:**
 - **Server API**: Available at `http://localhost:3000`

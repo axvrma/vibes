@@ -23,8 +23,21 @@ This directory contains the necessary Dockerfiles and docker-compose configurati
 
 2. Start the services:
    ```bash
+   cd infra # From the repository root
    docker compose up -d --build
    ```
+
+The Compose project (stack) is explicitly named `vibes`, regardless of the directory name. Containers use the names `vibes-server-1` and `vibes-dashboard-1`.
+
+### Existing deployments named `infra`
+
+Existing containers keep their names until you recreate them. From the `infra` directory, stop the old project before starting `vibes` to free its ports:
+
+```bash
+docker compose -p infra down
+```
+
+Do not add `--volumes` if you need to keep existing data. The project rename also changes the default data volume from `infra_vibes_data` to `vibes_vibes_data`. Before starting `vibes`, migrate your data or reuse the existing volume by adding `name: infra_vibes_data` under the top-level `volumes.vibes_data` entry in `docker-compose.yml`.
 
 ## Tailscale Serve Configuration
 
