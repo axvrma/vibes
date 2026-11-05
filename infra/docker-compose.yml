@@ -1,3 +1,4 @@
+name: vibes
 
 services:
   api-gateway:

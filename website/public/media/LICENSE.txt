@@ -1,0 +1,16 @@
+Original Vibes preview artwork and motion studies
+
+The alpine, coffee, city, ocean, and night SVG compositions, WebP posters,
+and MP4 animations were created specifically for this website. They contain
+no third-party photographs, footage, or music. MP4 files have no audio track.
+
+To the extent possible under law, the author has waived all copyright and
+related or neighboring rights to these five sample compositions under
+CC0 1.0 Universal. See https://creativecommons.org/publicdomain/zero/1.0/
+
+This dedication applies only to those sample compositions, not the Vibes
+brand, application code, or bundled fonts. Inter and JetBrains Mono are
+distributed by their respective font packages under the SIL Open Font License.
+
+Recreate the media with: npm run assets
+Original editable SVG files: website/src/assets/

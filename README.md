@@ -55,6 +55,37 @@ This repository is organized into four main components:
 
 ## Getting Started
 
+### Prerequisites
+
+To run this project locally without Docker, ensure you have the following installed:
+- [Node.js](https://nodejs.org/) & npm
+- [Flutter SDK](https://flutter.dev/docs/get-started/install)
+- [Docker & Docker Compose](https://www.docker.com/) (for containerized deployment)
+
+---
+
+### Running via Docker (Recommended)
+
+The easiest way to get the backend and dashboard running is using the provided Docker Compose configuration.
+
+1. Navigate to the `infra` directory:
+   ```bash
+   cd infra
+   ```
+2. Build and start the containers:
+   ```bash
+   docker compose up -d --build
+   ```
+
+The Compose project (stack) is named `vibes`, with containers named `vibes-server-1` and `vibes-dashboard-1`.
+
+**Services started:**
+- **Server API**: Available at `http://localhost:3000`
+- **Dashboard**: Available at `http://localhost:80` (or your mapped port)
+- *Note: Application data (like sqlite database and media files) is persisted in a local Docker volume (`vibes_data`).*
+
+---
+
 ### Local Development Setup
 If you wish to run the components independently for development, check the README inside each respective folder:
 - [Backend Server (Node.js)](server/README.md)
