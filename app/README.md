@@ -1,102 +1,49 @@
-# Vibes
+# Vibes Application (Flutter)
 
-A modern video player app with TikTok-style vertical scrolling, likes, and notes.
+A modern, high-performance TikTok-style video application built using Flutter. This app features vertical scrolling, likes, interactive notes, and fully seamless auto-play logic with background audio support. 
 
-## Features
+It is completely cross-platform and natively supports **Mobile (Android/iOS)**, **Web**, and **Desktop (macOS, Windows, Linux)**.
 
-- Vertical swipe video feed
-- Support for multiple video formats (mp4, mov, mkv, webm, avi, m4v, 3gp)
-- Like and save notes per video
-- Auto-shuffle and loop
-- Modern Gen-Z aesthetic UI
-- Screen stays awake during playback
+## Key Architecture Choices
+- **Video Playback**: Powered by the highly performant `media_kit` library.
+- **State & Local Storage**: Managed using `Hive` for blistering fast local caching and offline capabilities.
+- **Routing**: Built using Flutter's native declarative routing architecture.
 
-## Build Commands
+## Local Development
 
-### Debug Build
+### Running the App
+1. Install dependencies:
 ```bash
-flutter run
+flutter pub get
 ```
 
-### Release APK (Direct Install)
+2. Run on your desired platform:
+
+**Web (Chrome):**
 ```bash
-flutter build apk --release
+flutter run -d chrome --dart-define=API_URL=http://localhost:3000/api
 ```
 
-### Release App Bundle (Play Store)
+**Mobile:**
 ```bash
-flutter build appbundle --release --obfuscate --split-debug-info=build/debug-info
+flutter run -d ios      # iOS Simulator / Device
+flutter run -d android  # Android Emulator / Device
 ```
 
-### Split APKs by Architecture
+**Desktop:**
 ```bash
-flutter build apk --release --split-per-abi
+flutter run -d macos    # macOS
+flutter run -d windows  # Windows
+flutter run -d linux    # Linux
 ```
+*(When running natively on Mobile/Desktop, ensure your backend server is accessible and update `API_URL` if needed, defaults to `http://localhost:3000/api`)*
 
-Output locations:
-- APK: `build/app/outputs/flutter-apk/app-release.apk`
-- AAB: `build/app/outputs/bundle/release/app-release.aab`
+## Production Deployment (Web)
 
----
-
-## Signing Credentials
-
-| Property | Value |
-|----------|-------|
-| Keystore | `android/app/vibes-upload-key.jks` |
-| Alias | `vibes` |
-| Password | `vibes2024` |
-| Valid Until | Aug 2053 |
-
-### Certificate Fingerprint (SHA256)
-```
-A4:A1:B1:E4:F4:D6:5D:72:65:3C:1D:89:2B:A3:B6:DA:DB:50:05:57:84:EF:3C:92:38:33:9F:38:8D:93:59:DC
-```
-
-### Manual Signing (if needed)
+For the Dockerized Web deployment, the app is compiled with specific build arguments to ensure it routes cleanly through the NGINX API Gateway:
 ```bash
-jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-  -keystore android/app/vibes-upload-key.jks \
-  -storepass vibes2024 \
-  your-app.apk vibes
+flutter build web --base-href /app/ --dart-define=API_URL=/api
 ```
+By defining `API_URL=/api`, the Flutter web application sends API calls to its own origin (e.g. `http://localhost/api`), gracefully bypassing any restrictive browser CORS policies.
 
-### Verify Signature
-```bash
-keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab
-```
-
----
-
-## App Info
-
-| Property | Value |
-|----------|-------|
-| Package ID | `com.axvrma.vibes` |
-| App Name | Vibes |
-| Version | 1.0.0+1 |
-
----
-
-## Project Structure
-
-```
-lib/
-└── main.dart          # Main app code
-
-android/
-├── app/
-│   ├── vibes-upload-key.jks    # Upload keystore
-│   ├── proguard-rules.pro      # ProGuard config
-│   └── build.gradle.kts        # Build config
-└── key.properties              # Signing config
-
-assets/
-└── icons/                      # App icons
-```
-
-## Requirements
-
-- Flutter 3.8.1+
-- Android SDK 34+
-- JDK 17+
+*(See the `infra` folder for more details on running the entire stack!)*

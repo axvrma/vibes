@@ -12,10 +12,13 @@ const app = express();
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || '127.0.0.1';
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://localhost:3000'],
-  credentials: true
+  origin: true,
+  credentials: true,
+  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length']
 }));
 app.use(express.json());
 app.use(morgan('dev'));

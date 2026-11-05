@@ -1,34 +1,36 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { forkJoin, Observable } from 'rxjs';
 import { MediaApiService } from '../services/media-api.service';
 
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule } from '@angular/material/table';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatMenuModule } from '@angular/material/menu';
+import { HlmCardImports } from '@spartan-ng/helm/card';
+import { HlmButtonImports } from '@spartan-ng/helm/button';
+import { HlmIconImports } from '@spartan-ng/helm/icon';
+import { HlmTableImports } from '@spartan-ng/helm/table';
+import { HlmInputImports } from '@spartan-ng/helm/input';
+import { HlmLabelImports } from '@spartan-ng/helm/label';
+import { HlmBadgeImports } from '@spartan-ng/helm/badge';
+import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
+
+
+import { HlmDialogService } from '../components/ui/dialog/src/lib/hlm-dialog.service';
 
 import { MetricCardComponent } from '../shared/components/metric-card.component';
 import { UploadDialogComponent } from '../shared/components/upload-dialog.component';
-import { ConfirmDeleteDialogComponent } from '../shared/components/confirm-delete-dialog.component';
 import { VideoPlayerDialogComponent } from '../shared/components/video-player-dialog.component';
 import { UpdateTagsDialogComponent } from '../shared/components/update-tags-dialog.component';
 
 import { AuthService } from '../services/auth.service';
 
+import { provideIcons } from '@ng-icons/core';
+import { lucideUpload, lucideVideo, lucideDatabase, lucideFolder, lucideTag, lucideCirclePlay, lucideEllipsisVertical, lucideTrash, lucideSearch } from '@ng-icons/lucide';
+
 export interface Video {
   id: string;
   title: string;
   originalFilename: string;
-  duration: number;
+  durationSeconds: number;
   sizeBytes: number;
   category?: { id: string; name: string; color: string; };
   tags: any[];
@@ -42,27 +44,27 @@ export interface Video {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTableModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatChipsModule,
-    MatSnackBarModule,
-    MatDialogModule,
-    MatMenuModule,
+    HlmCardImports,
+    HlmButtonImports,
+    HlmIconImports,
+    HlmTableImports,
+    HlmInputImports,
+    HlmLabelImports,
+    HlmBadgeImports,
+    HlmDropdownMenuImports,
+    
     MetricCardComponent
   ],
-  templateUrl: './dashboard.page.html',
-  styleUrls: ['./dashboard.page.scss']
+  providers: [
+    provideIcons({ lucideUpload, lucideVideo, lucideDatabase, lucideFolder, lucideTag, lucideCirclePlay, lucideEllipsisVertical, lucideTrash, lucideSearch })
+  ],
+  templateUrl: './dashboard.page.html'
 })
 export class DashboardPage implements OnInit {
   private api = inject(MediaApiService);
-  private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
   private auth = inject(AuthService);
+  private dialogService = inject(HlmDialogService);
+  private cdr = inject(ChangeDetectorRef);
   
   summary: any;
   videos: Video[] = [];
@@ -71,8 +73,9 @@ export class DashboardPage implements OnInit {
   availableTags: any[] = [];
   isLoading = true;
   
+  searchQuery = '';
   selectedCategoryFilter = 'all';
-  displayedColumns = ['thumbnail', 'title', 'category', 'tags', 'duration', 'size', 'actions'];
+  selectedVideos: Set<string> = new Set();
 
   ngOnInit() {
     this.loadData();
@@ -80,30 +83,98 @@ export class DashboardPage implements OnInit {
 
   loadData() {
     this.isLoading = true;
-    this.api.getSummary().subscribe(s => this.summary = s);
-    this.api.getTags().subscribe(t => this.availableTags = t);
-    this.api.getCategories(true).subscribe(c => {
-      this.categories = c;
-      this.loadVideos();
+    forkJoin({
+      summary: this.api.getSummary(),
+      tags: this.api.getTags(),
+      categories: this.api.getCategories(true)
+    }).subscribe({
+      next: (res) => {
+        this.summary = res.summary;
+        this.availableTags = res.tags;
+        this.categories = res.categories;
+        this.loadVideos();
+      },
+      error: (err) => {
+        console.error('Error loading initial data', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   loadVideos() {
-    this.api.getVideos().subscribe(res => {
-      this.videos = res.videos;
-      this.applyFilters();
-      this.isLoading = false;
+    this.api.getVideos().subscribe({
+      next: (res) => {
+        this.videos = res.videos;
+        this.applyFilters();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error loading videos', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   applyFilters() {
-    if (this.selectedCategoryFilter === 'all') {
-      this.filteredVideos = [...this.videos];
-    } else if (this.selectedCategoryFilter === 'uncategorized') {
-      this.filteredVideos = this.videos.filter(v => !v.category);
-    } else {
-      this.filteredVideos = this.videos.filter(v => v.category?.id === this.selectedCategoryFilter);
+    let filtered = this.videos;
+
+    // Filter by search query
+    if (this.searchQuery.trim()) {
+      const q = this.searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(v => 
+        (v.title && v.title.toLowerCase().includes(q)) ||
+        (v.originalFilename && v.originalFilename.toLowerCase().includes(q)) ||
+        (v.tags && v.tags.some((t: any) => t.name.toLowerCase().includes(q)))
+      );
     }
+
+    // Filter by category
+    if (this.selectedCategoryFilter === 'all') {
+      this.filteredVideos = filtered;
+    } else if (this.selectedCategoryFilter === 'uncategorized') {
+      this.filteredVideos = filtered.filter(v => !v.category);
+    } else {
+      this.filteredVideos = filtered.filter(v => v.category?.id === this.selectedCategoryFilter);
+    }
+  }
+
+  onFilterChange(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectedCategoryFilter = value;
+    this.applyFilters();
+  }
+
+  onSearchChange(event: Event) {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchQuery = value;
+    this.applyFilters();
+  }
+
+  toggleSelectAll(event: any) {
+    if (event.target.checked) {
+      this.selectedVideos = new Set(this.filteredVideos.map(v => v.id));
+    } else {
+      this.selectedVideos = new Set();
+    }
+    this.cdr.detectChanges();
+  }
+
+  toggleVideoSelection(videoId: string) {
+    const newSet = new Set(this.selectedVideos);
+    if (newSet.has(videoId)) {
+      newSet.delete(videoId);
+    } else {
+      newSet.add(videoId);
+    }
+    this.selectedVideos = newSet;
+    this.cdr.detectChanges();
+  }
+
+  isAllSelected(): boolean {
+    return this.filteredVideos.length > 0 && this.selectedVideos.size === this.filteredVideos.length;
   }
 
   getTopTags(video: Video): any[] {
@@ -124,21 +195,20 @@ export class DashboardPage implements OnInit {
     if (this.auth.token) {
       streamUrl += `?token=${this.auth.token}`;
     }
-    this.dialog.open(VideoPlayerDialogComponent, {
-      width: '80vw',
-      maxWidth: '900px',
-      data: { title: video.title || video.originalFilename, streamUrl }
+    
+    this.dialogService.open(VideoPlayerDialogComponent, {
+      context: { title: video.title || video.originalFilename, streamUrl },
+      contentClass: 'sm:max-w-[900px] w-full p-0 overflow-hidden bg-black border-0'
     });
   }
 
   openUploadDialog() {
-    const dialogRef = this.dialog.open(UploadDialogComponent, {
-      width: '600px',
-      disableClose: true,
-      data: { availableTags: this.availableTags }
+    const dialogRef = this.dialogService.open(UploadDialogComponent, {
+      context: { availableTags: this.availableTags },
+      contentClass: 'sm:max-w-lg'
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.closed$.subscribe(result => {
       if (result) {
         this.loadData();
       }
@@ -146,51 +216,29 @@ export class DashboardPage implements OnInit {
   }
 
   deleteVideo(video: any) {
-    const dialogRef = this.dialog.open(ConfirmDeleteDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Delete Video',
-        message: `Are you sure you want to delete "${video.title || video.originalFilename}"?`,
-        warningText: 'The media file and thumbnail will be permanently deleted.'
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(confirmed => {
-      if (confirmed) {
-        this.api.deleteVideo(video.id).subscribe({
-          next: () => {
-            this.snackBar.open('Video deleted successfully.', 'Close', { duration: 3000 });
-            this.loadData();
-          },
-          error: () => {
-            this.snackBar.open('Delete failed.', 'Close', { duration: 3000 });
-          }
-        });
-      }
-    });
-  }
-
-  addTagToVideo(video: any, tagId: string) {
-    if (tagId) {
-      this.api.attachTag(video.id, tagId).subscribe(() => this.loadVideos());
+    if(confirm(`Are you sure you want to delete "${video.title || video.originalFilename}"?`)) {
+      this.api.deleteVideo(video.id).subscribe({
+        next: () => {
+          this.loadData();
+        },
+        error: () => {
+          alert('Delete failed.');
+        }
+      });
     }
   }
 
-  removeTagFromVideo(videoId: string, tagId: string) {
-    this.api.detachTag(videoId, tagId).subscribe(() => this.loadVideos());
-  }
-
   updateTags(video: Video) {
-    const dialogRef = this.dialog.open(UpdateTagsDialogComponent, {
-      width: '400px',
-      data: {
+    const dialogRef = this.dialogService.open(UpdateTagsDialogComponent, {
+      context: {
         videoId: video.id,
         currentTags: video.tags,
         availableTags: this.availableTags
-      }
+      },
+      contentClass: 'sm:max-w-sm'
     });
 
-    dialogRef.afterClosed().subscribe(selectedTags => {
+    dialogRef.closed$.subscribe(selectedTags => {
       if (!selectedTags) return; // User cancelled
       
       const currentTagIds = (video.tags || []).map(t => t.id);
@@ -212,14 +260,89 @@ export class DashboardPage implements OnInit {
       if (requests.length > 0) {
         forkJoin(requests).subscribe({
           next: () => {
-            this.snackBar.open('Tags updated successfully.', 'Close', { duration: 3000 });
             this.loadVideos();
           },
           error: () => {
-            this.snackBar.open('Failed to update tags.', 'Close', { duration: 3000 });
+            alert('Failed to update tags.');
             this.loadVideos();
           }
         });
+      }
+    });
+  }
+
+  bulkDelete() {
+    if (this.selectedVideos.size === 0) return;
+    if (confirm(`Are you sure you want to delete ${this.selectedVideos.size} video(s)?`)) {
+      const requests = Array.from(this.selectedVideos).map(id => this.api.deleteVideo(id));
+      forkJoin(requests).subscribe({
+        next: () => {
+          this.selectedVideos = new Set();
+          this.loadData();
+        },
+        error: () => {
+          alert('Delete failed.');
+          this.loadData();
+        }
+      });
+    }
+  }
+
+  bulkUpdateTags() {
+    if (this.selectedVideos.size === 0) return;
+    
+    const videosToUpdate = this.videos.filter(v => this.selectedVideos.has(v.id));
+    
+    const unionTagIds = new Set<string>();
+    videosToUpdate.forEach(v => {
+      (v.tags || []).forEach((t: any) => unionTagIds.add(t.id));
+    });
+    
+    const currentTags = this.availableTags.filter(t => unionTagIds.has(t.id));
+
+    const dialogRef = this.dialogService.open(UpdateTagsDialogComponent, {
+      context: {
+        videoId: 'bulk',
+        currentTags: currentTags,
+        availableTags: this.availableTags
+      },
+      contentClass: 'sm:max-w-sm'
+    });
+
+    dialogRef.closed$.subscribe(selectedTags => {
+      if (!selectedTags) return; // User cancelled
+      
+      const newTagIds = selectedTags as string[];
+      const requests: Observable<any>[] = [];
+      
+      videosToUpdate.forEach(video => {
+        const videoTagIds = (video.tags || []).map(t => t.id);
+        
+        const tagsToAdd = newTagIds.filter(id => !videoTagIds.includes(id));
+        const tagsToRemove = Array.from(unionTagIds).filter(id => !newTagIds.includes(id) && videoTagIds.includes(id));
+        
+        tagsToAdd.forEach(id => {
+          requests.push(this.api.attachTag(video.id, id));
+        });
+        
+        tagsToRemove.forEach(id => {
+          requests.push(this.api.detachTag(video.id, id));
+        });
+      });
+      
+      if (requests.length > 0) {
+        forkJoin(requests).subscribe({
+          next: () => {
+            this.selectedVideos = new Set();
+            this.loadVideos();
+          },
+          error: () => {
+            alert('Failed to update tags.');
+            this.loadVideos();
+          }
+        });
+      } else {
+        this.selectedVideos = new Set();
       }
     });
   }
@@ -237,5 +360,4 @@ export class DashboardPage implements OnInit {
     const s = Math.floor(seconds % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
-
 }

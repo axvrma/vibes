@@ -1,12 +1,14 @@
-# Infra Setup
+# Vibes Infra Deployment Guide
 
-This directory contains the necessary Dockerfiles and docker-compose configurations to deploy the private media platform on a Raspberry Pi (ARM64).
+This folder contains the Docker Compose configurations required to deploy the complete Vibes ecosystem (App, Dashboard, and Server) smoothly on a local server.
 
-## Prerequisites
+## Architecture
+The deployment uses a **Unified NGINX Reverse Proxy (API Gateway)** that sits on port `80`. This architecture securely routes traffic to internal Docker containers without exposing their native ports to the host machine:
+- `http://<your-server-ip>/app/` -> Renders the Flutter Web App
+- `http://<your-server-ip>/dashboard/` -> Renders the Angular Dashboard
+- `http://<your-server-ip>/api/` -> Routes directly to the Node.js Backend Server
 
-1. **Docker & Docker Compose**: Ensure they are installed on your Raspberry Pi.
-2. **FFmpeg**: The `server.Dockerfile` installs `ffmpeg` automatically within the Alpine Node container.
-3. **External SSD**: Mount your SSD to a known directory, for example, `/mnt/ssd`.
+## Quick Start (Deploy from Scratch)
 
 ## Deployment
 
@@ -46,12 +48,32 @@ We want to expose the services privately over Tailscale without using Funnel (wh
 1. Install Tailscale on the Raspberry Pi and authenticate.
 2. To serve the API and the Dashboard over Tailscale:
 
+### 1. Build and Run the Stack
+Navigate to the `infra` directory (if not already there) and run:
 ```bash
-# Serve the NGINX dashboard on HTTPS
-tailscale serve --bg 80
+docker-compose up -d --build
+```
+This command will build the Flutter Web app, Angular Dashboard, and Node.js backend entirely from scratch inside Docker containers. The initial build might take a few minutes as it resolves dependencies for all three environments.
 
-# Serve the Express API on HTTPS under /api
-tailscale serve --bg --set-path /api http://127.0.0.1:3000/api
+### 2. Verify Services
+Check the status of your running containers:
+```bash
+docker-compose ps
 ```
 
-This ensures everything is served securely on your private Tailscale network. Your tailnet URL (e.g., `https://raspberrypi.tailnet-xyz.ts.net`) will serve the Angular app at `/` and the API at `/api`.
+You can view the logs in real-time if something fails:
+```bash
+docker-compose logs -f
+```
+
+### 3. Accessing the Application
+Once the containers are running, simply open your browser and navigate to:
+- **Web App**: `http://localhost/app/`
+- **Admin Dashboard**: `http://localhost/dashboard/`
+
+*(Replace `localhost` with your local server's IP address if accessing from another device on the network).*
+
+## Data Persistence
+The Node.js server utilizes SQLite and stores media files locally. In `docker-compose.yml`, a persistent Docker Volume named `vibes_data` is mounted to `/app/data` inside the server container.
+
+This ensures that all your user data, uploaded videos, and metadata remain safely persisted even if you stop, rebuild, or destroy the containers!

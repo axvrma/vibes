@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/config/settings_repository.dart';
-
+import '../../auth/data/auth_repository.dart';
+import '../../auth/presentation/mode_selection_screen.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -15,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _settings = SettingsRepository();
   late TextEditingController _urlController;
   late bool _isLocalMode;
+  late bool _isDarkMode;
   String? _localFolderPath;
 
   @override
@@ -22,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _urlController = TextEditingController(text: _settings.serverUrl);
     _isLocalMode = _settings.isLocalMode;
+    _isDarkMode = _settings.isDarkMode;
     _localFolderPath = _settings.localFolderPath;
   }
 
@@ -32,11 +36,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _pickFolder() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Local Folder Mode is not supported on Web.'))
+        );
+      }
+      return;
+    }
+
     // Request permissions
     bool hasPermission = false;
-    if (await Permission.manageExternalStorage.request().isGranted) {
-      hasPermission = true;
-    } else if (await Permission.storage.request().isGranted) {
+    if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      if (await Permission.manageExternalStorage.request().isGranted) {
+        hasPermission = true;
+      } else if (await Permission.storage.request().isGranted) {
+        hasPermission = true;
+      }
+    } else {
       hasPermission = true;
     }
 
@@ -77,9 +94,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Settings'),
-          backgroundColor: const Color(0xFF0A0A0F),
           leading: IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: Colors.white, size: 24.0),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: Theme.of(context).appBarTheme.foregroundColor ?? Colors.white, size: 24.0),
             onPressed: _saveAndPop,
           ),
         ),
@@ -87,20 +103,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.all(16.0),
           children: [
             SwitchListTile(
-              title: const Text('Local Folder Mode', style: TextStyle(color: Colors.white)),
-              subtitle: const Text('Play videos directly from the device', style: TextStyle(color: Colors.grey)),
+              title: const Text('App Theme (Dark Mode)'),
+              subtitle: const Text('Toggle between light and dark theme', style: TextStyle(color: Colors.grey)),
               activeColor: const Color(0xFFE040FB),
-              value: _isLocalMode,
-              onChanged: (val) {
+              value: _isDarkMode,
+              onChanged: (val) async {
                 setState(() {
-                  _isLocalMode = val;
+                  _isDarkMode = val;
                 });
+                await _settings.setIsDarkMode(val);
               },
             ),
             const Divider(color: Colors.grey),
+            if (!kIsWeb) ...[
+              SwitchListTile(
+                title: const Text('Local Folder Mode'),
+                subtitle: const Text('Play videos directly from the device', style: TextStyle(color: Colors.grey)),
+                activeColor: const Color(0xFFE040FB),
+                value: _isLocalMode,
+                onChanged: (val) {
+                  setState(() {
+                    _isLocalMode = val;
+                  });
+                },
+              ),
+              const Divider(color: Colors.grey),
+            ],
             if (_isLocalMode) ...[
               ListTile(
-                title: const Text('Local Folder Path', style: TextStyle(color: Colors.white)),
+                title: const Text('Local Folder Path'),
                 subtitle: Text(_localFolderPath ?? 'No folder selected', style: const TextStyle(color: Colors.grey)),
                 trailing: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE040FB)),
@@ -111,11 +142,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ] else ...[
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Text('Server URL', style: TextStyle(color: Colors.white, fontSize: 16)),
+                child: Text('Server URL', style: TextStyle(fontSize: 16)),
               ),
               TextField(
                 controller: _urlController,
-                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   hintText: 'http://10.0.2.2:3000/api',
                   hintStyle: TextStyle(color: Colors.grey),
@@ -129,6 +159,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               )
             ],
+            const SizedBox(height: 32),
+            if (!kIsWeb)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await _settings.setHasSelectedMode(false);
+                  await AuthRepository().logout();
+                  if (mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const ModeSelectionScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+                icon: const HugeIcon(icon: HugeIcons.strokeRoundedArrowLeftRight, color: Colors.redAccent, size: 24.0),
+                label: const Text('Change App Mode'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent.withOpacity(0.2),
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
           ],
         ),
       ),
