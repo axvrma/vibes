@@ -1,3 +1,4 @@
+import { FeedbackService } from '../shared/components/confirmation-dialog.component';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MediaApiService } from '../services/media-api.service';
@@ -31,6 +32,7 @@ import { lucideCheck, lucideCircleX, lucideKey, lucideTrash2 } from '@ng-icons/l
   templateUrl: './users.page.html'
 })
 export class UsersPage implements OnInit {
+  private feedback=inject(FeedbackService);
   private api = inject(MediaApiService);
   private auth = inject(AuthService);
   private cdr = inject(ChangeDetectorRef);
@@ -52,7 +54,7 @@ export class UsersPage implements OnInit {
 
   toggleUserStatus(user: any) {
     if (user.id === this.currentUser?.id) {
-      alert('You cannot change your own status.');
+      this.feedback.alert('You cannot change your own status.');
       return;
     }
 
@@ -62,45 +64,45 @@ export class UsersPage implements OnInit {
         user.is_active = newStatus;
       },
       error: (err) => {
-        alert(err.error?.error?.message || 'Failed to update user status.');
+        this.feedback.alert(err.error?.error?.message || 'Failed to update user status.');
       }
     });
   }
 
-  deleteUser(user: any) {
+  async deleteUser(user: any) {
     if (user.id === this.currentUser?.id) {
-      alert('You cannot delete your own account.');
+      this.feedback.alert('You cannot delete your own account.');
       return;
     }
-    
-    if (window.confirm(`Are you sure you want to delete ${user.email}? This cannot be undone.`)) {
+
+    if (await this.feedback.confirm(`Are you sure you want to delete ${user.email}? This cannot be undone.`)) {
       this.api.deleteUser(user.id).subscribe({
         next: () => {
           this.users = this.users.filter(u => u.id !== user.id);
         },
         error: (err) => {
-          alert(err.error?.error?.message || 'Failed to delete user.');
+          this.feedback.alert(err.error?.error?.message || 'Failed to delete user.');
         }
       });
     }
   }
 
-  overridePassword(user: any) {
-    const newPassword = window.prompt(`Enter new password for ${user.email} (min 6 characters):`);
+  async overridePassword(user: any) {
+    const newPassword = await this.feedback.password(`Set a new password for ${user.email}. Existing refresh sessions will be revoked.`);
     if (newPassword === null) return; // User cancelled
-    
-    if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters.');
+
+    if (newPassword.length < 12) {
+      this.feedback.alert('Password must be at least 12 characters.');
       return;
     }
-    
-    if (window.confirm(`Are you sure you want to change the password for ${user.email}?`)) {
+
+    {
       this.api.updateUserPassword(user.id, newPassword).subscribe({
         next: () => {
-          alert('Password updated successfully.');
+          this.feedback.alert('Password updated successfully.');
         },
         error: (err) => {
-          alert(err.error?.error?.message || 'Failed to update password.');
+          this.feedback.alert(err.error?.error?.message || 'Failed to update password.');
         }
       });
     }

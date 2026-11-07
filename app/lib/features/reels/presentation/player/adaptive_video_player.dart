@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'video_player_mobile.dart' if (dart.library.js_interop) 'video_player_web.dart';
+import 'video_player_mobile.dart'
+    if (dart.library.js_interop) 'video_player_web.dart';
 
 abstract class AdaptiveVideoController {
   bool get isPlaying;
@@ -9,12 +10,17 @@ abstract class AdaptiveVideoController {
   Duration get position;
   Duration get duration;
 
-  Future<void> initialize(Uri url, {Object? file, Map<String, String>? headers});
+  Future<void> initialize(
+    Uri url, {
+    Object? file,
+    Map<String, String>? headers,
+  });
   Future<void> play();
   Future<void> pause();
   Future<void> seekTo(Duration position);
   Future<void> setLooping(bool looping);
   Future<void> setPlaybackRate(double rate);
+  Future<void> setVolume(double volume);
   void dispose();
   void addListener(VoidCallback listener);
   void removeListener(VoidCallback listener);

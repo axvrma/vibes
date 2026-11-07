@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as jose from 'jose';
 import db from '../db/index';
+import { verifyMediaTicket } from '../services/media-tickets';
 
 const secret = new TextEncoder().encode(
   process.env.AUTH_ACCESS_TOKEN_SECRET || 'fallback-secret-do-not-use-in-prod'
@@ -28,10 +29,16 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.split(' ')[1];
-  } 
-  
-  if (!token && req.query.token && typeof req.query.token === 'string') {
-    token = req.query.token;
+  }
+
+  const mediaRoute = /^\/videos\/([^/]+)\/(stream|thumbnail)$/.exec(req.path);
+  if (!token && typeof req.query.ticket === 'string' && mediaRoute && ['GET','HEAD'].includes(req.method)) {
+    try {
+      const payload=await verifyMediaTicket(req.query.ticket,mediaRoute[1],mediaRoute[2]);
+      const user=db.prepare('SELECT id,email,role,is_active FROM users WHERE id=?').get(payload.sub) as AuthUser|undefined;
+      if(!user?.is_active) throw new Error('Inactive account');
+      req.user=user; next(); return;
+    } catch { res.status(401).json({error:{code:'UNAUTHORIZED',message:'Media ticket expired or invalid.'}}); return; }
   }
 
   if (!token) {
@@ -41,12 +48,13 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const { payload } = await jose.jwtVerify(token, secret, {
-      issuer: process.env.AUTH_ISSUER || 'reels-private-media'
+      issuer: process.env.AUTH_ISSUER || 'reels-private-media',
+      algorithms: ['HS256']
     });
 
     const user = db.prepare('SELECT id, email, role, is_active FROM users WHERE id = ?').get(payload.sub) as AuthUser | undefined;
 
-    if (!user) {
+    if (payload.use === 'media' || !user || !user.is_active) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'User not found.' } });
       return;
     }
@@ -77,7 +85,7 @@ export const authorizeRoles = (...roles: string[]) => {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } });
       return;
     }
-    
+
     if (!roles.includes(req.user.role)) {
       res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Insufficient permissions.' } });
       return;

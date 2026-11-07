@@ -10,10 +10,12 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const db = new Database(dbPath, { verbose: console.log });
+const db = new Database(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
 
 import { runMigrations } from './migrations';
 

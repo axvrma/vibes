@@ -2,16 +2,25 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../../core/config/settings_repository.dart';
 
 class AuthRepository {
   final Dio _dio;
   final FlutterSecureStorage _storage;
+  static Future<String?>? _refreshing;
 
   AuthRepository({Dio? dio, FlutterSecureStorage? storage})
-      : _dio = dio ?? Dio(),
-        _storage = storage ?? const FlutterSecureStorage();
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 15),
+            ),
+          ),
+      _storage = storage ?? const FlutterSecureStorage();
 
   Future<String?> _getDeviceName() async {
     try {
@@ -42,7 +51,7 @@ class AuthRepository {
           'email': email,
           'password': password,
           'clientType': 'mobile',
-          if (deviceName != null) 'deviceName': deviceName,
+          'deviceName': ?deviceName,
         },
       );
 
@@ -71,7 +80,7 @@ class AuthRepository {
           'email': email,
           'password': password,
           'clientType': 'mobile',
-          if (deviceName != null) 'deviceName': deviceName,
+          'deviceName': ?deviceName,
         },
       );
 
@@ -94,8 +103,10 @@ class AuthRepository {
     final token = await _storage.read(key: 'accessToken');
 
     try {
+      final refreshToken = await _storage.read(key: 'refreshToken');
       await _dio.post(
         '$apiUrl/auth/logout',
+        data: {'refreshToken': refreshToken},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
     } catch (_) {}
@@ -104,7 +115,21 @@ class AuthRepository {
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: 'accessToken');
+    final token = await _storage.read(key: 'accessToken');
+    if (token != null) {
+      try {
+        final data = jsonDecode(
+          utf8.decode(
+            base64Url.decode(base64Url.normalize(token.split('.')[1])),
+          ),
+        );
+        if ((data['exp'] as num) * 1000 <
+            DateTime.now().millisecondsSinceEpoch + 60000) {
+          return await refresh() ?? token;
+        }
+      } catch (_) {}
+    }
+    return token;
   }
 
   Future<String?> getUserId() async {
@@ -120,7 +145,11 @@ class AuthRepository {
     return false;
   }
 
-  Future<String?> refresh() async {
+  Future<String?> refresh() {
+    return _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+  }
+
+  Future<String?> _doRefresh() async {
     final settings = SettingsRepository();
     final apiUrl = settings.serverUrl;
     final refreshToken = await _storage.read(key: 'refreshToken');
@@ -138,7 +167,7 @@ class AuthRepository {
 
       final newToken = response.data['accessToken'];
       final newRefresh = response.data['refreshToken'];
-      
+
       if (newToken != null) {
         await _storage.write(key: 'accessToken', value: newToken);
         if (newRefresh != null) {
@@ -146,8 +175,10 @@ class AuthRepository {
         }
         return newToken;
       }
-    } catch (e) {
-      await _clearTokens();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        await _clearTokens();
+      }
     }
     return null;
   }

@@ -1,0 +1,64 @@
+{
+  "baseline": "2d99f038eca82901bd787eb697017c9aa4570941",
+  "release": "2.3.0-rc",
+  "validation_date": "2026-11-05",
+  "tests": {
+    "backend": 34,
+    "dashboard": 53,
+    "flutter": 13,
+    "website_unit": 10,
+    "website_browser_passed": 23,
+    "website_browser_skipped": 3
+  },
+  "builds": {
+    "api": "passed",
+    "angular_production": "passed",
+    "flutter_web": "passed",
+    "android_debug_apk": "passed",
+    "website_production": "passed",
+    "docker_images": "passed"
+  },
+  "flutter_analyzer": "no issues",
+  "integration": {
+    "status": "passed",
+    "checks": [
+      "gateway health and SPA routes",
+      "real FFprobe and FFmpeg indexing",
+      "folder category",
+      "authenticated range playback",
+      "thumbnail ticket",
+      "bearer query rejection",
+      "idempotent refresh",
+      "archive/reconnect and rename identity",
+      "state preservation",
+      "online SQLite backup",
+      "restart persistence",
+      "missing file preserves metadata",
+      "real MP4/H.264 upload and playback",
+      "read-only mount enforcement",
+      "real desktop/mobile dashboard browser flows",
+      "Flutter web onboarding and same-origin renderer"
+    ],
+    "firstScanMs": 102,
+    "unchangedScanMs": 7
+  },
+  "production_dependency_audits": {
+    "server": 0,
+    "dashboard": 0,
+    "website": 0
+  },
+  "dashboard_development_audit": {
+    "moderate": 14,
+    "high": 2
+  },
+  "benchmark": {
+    "videos": 2000,
+    "unchanged_scan_ms": 1999,
+    "query_page_size": 48,
+    "query_median_ms": 0.69,
+    "query_p95_ms": 1.78,
+    "rss_mb": 75.7,
+    "scope": "disposable synthetic ready records; no initial indexing/playback claim"
+  },
+  "readiness": "release candidate; native hardware/platform and deployment acceptance remain unverified"
+}

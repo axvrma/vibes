@@ -1,3 +1,4 @@
+import { FeedbackService } from '../shared/components/confirmation-dialog.component';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -35,16 +36,17 @@ import { lucidePlus, lucideTrash2, lucideX } from '@ng-icons/lucide';
   templateUrl: './tags.page.html'
 })
 export class TagsPage implements OnInit {
+  private feedback=inject(FeedbackService);
   private api = inject(MediaApiService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
-  
+
   tags: any[] = [];
-  
+
   isEditing = false;
   isCreating = false;
   editingId: string | null = null;
-  
+
   tagForm = this.fb.group({
     name: ['', Validators.required],
     color: ['#22c55e']
@@ -107,10 +109,10 @@ export class TagsPage implements OnInit {
     this.tagForm.reset({ color: '#22c55e' });
   }
 
-  deleteTag(event: Event, tag: any) {
+  async deleteTag(event: Event, tag: any) {
     event.stopPropagation();
 
-    if (window.confirm(`Are you sure you want to delete tag "${tag.name}"? This will remove it from all videos and categories.`)) {
+    if (await this.feedback.confirm(`Are you sure you want to delete tag "${tag.name}"? This will remove it from all videos and categories.`)) {
       this.api.deleteTag(tag.id).subscribe({
         next: () => {
           if (this.editingId === tag.id) {
@@ -124,6 +126,6 @@ export class TagsPage implements OnInit {
   }
 
   handleError(err: any) {
-    alert(err.error?.error?.message || 'Operation failed');
+    this.feedback.alert(err.error?.error?.message || 'Operation failed');
   }
 }

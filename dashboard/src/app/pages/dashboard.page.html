@@ -1,8 +1,8 @@
 <div class="flex flex-col space-y-6">
   <header class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">Media Library</h1>
-      <p class="text-sm text-muted-foreground mt-1">Manage your private reels collection</p>
+      <h1 class="text-3xl font-bold tracking-tight">Videos</h1>
+      <p class="text-sm text-muted-foreground mt-1">Explore, organize and care for your private collection</p>
     </div>
     <div>
       <button hlmBtn variant="default" (click)="openUploadDialog()">
@@ -13,28 +13,28 @@
 
   <!-- Summary Cards Section -->
   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-    <app-metric-card 
-      title="Total Videos" 
-      [value]="summary?.totalVideos || 0" 
-      icon="lucideVideo" 
+    <app-metric-card
+      title="Total Videos"
+      [value]="summary?.totalVideos || 0"
+      icon="lucideVideo"
       colorClass="bg-primary/15 text-primary">
     </app-metric-card>
-    <app-metric-card 
-      title="Storage Used" 
-      [value]="formatBytes(summary?.totalSizeBytes || 0)" 
-      icon="lucideDatabase" 
+    <app-metric-card
+      title="Logical storage tracked"
+      [value]="formatBytes(summary?.totalSizeBytes || 0)"
+      icon="lucideDatabase"
       colorClass="bg-secondary/20 text-secondary-foreground">
     </app-metric-card>
-    <app-metric-card 
-      title="Total Categories" 
-      [value]="summary?.totalCategories || categories.length" 
-      icon="lucideFolder" 
+    <app-metric-card
+      title="Total Categories"
+      [value]="summary?.totalCategories || categories.length"
+      icon="lucideFolder"
       colorClass="bg-accent/20 text-accent-foreground">
     </app-metric-card>
-    <app-metric-card 
-      title="Total Tags" 
-      [value]="summary?.totalTags || availableTags.length" 
-      icon="lucideTag" 
+    <app-metric-card
+      title="Total Tags"
+      [value]="summary?.totalTags || availableTags.length"
+      icon="lucideTag"
       colorClass="bg-muted text-muted-foreground">
     </app-metric-card>
   </div>
@@ -51,20 +51,20 @@
   </div>
 
   <!-- Video Triage Table -->
-  <section *ngIf="videos.length > 0" hlmCard class="overflow-hidden shadow-sm">
-    <div hlmCardHeader class="flex flex-row items-center justify-between py-4">
-      <h3 hlmCardTitle>Recent Videos</h3>
-      
-      <div class="flex items-center space-x-4">
+  <section hlmCard class="overflow-hidden shadow-sm">
+    <div hlmCardHeader class="flex flex-wrap gap-4 items-center justify-between py-4">
+      <h3 hlmCardTitle>Your collection</h3>
+
+      <div class="flex flex-wrap gap-3 items-center">
         <!-- Search Bar -->
-        <div class="relative w-64 hidden sm:block">
+        <div class="relative w-64">
           <ng-icon hlm name="lucideSearch" class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"></ng-icon>
-          <input hlmInput placeholder="Search videos, categories, tags..." class="pl-9 w-full" [value]="searchQuery" (input)="onSearchChange($event)" />
+          <input hlmInput aria-label="Search videos" placeholder="Search titles and tags…" class="pl-9 w-full" [value]="searchQuery" (input)="onSearchChange($event)" />
         </div>
 
         <div class="flex items-center space-x-2">
           <label hlmLabel class="sr-only">Filter by Category</label>
-          <select class="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+          <select class="flex h-10 w-48 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   (change)="onFilterChange($event)">
             <option value="all">All Categories</option>
             <option value="uncategorized">Uncategorized</option>
@@ -76,10 +76,21 @@
       </div>
     </div>
 
+    <div class="flex flex-wrap gap-3 px-6 pb-4">
+      <select aria-label="Source" class="border rounded-md p-2 bg-background" [(ngModel)]="sourceFilter" (change)="applyFilters()"><option value="">All sources</option><option value="upload">Uploads</option><option value="external">External libraries</option></select>
+      <select aria-label="Availability" class="border rounded-md p-2 bg-background" [(ngModel)]="availabilityFilter" (change)="applyFilters()"><option value="">All availability</option><option value="available">Available</option><option value="missing">Missing</option><option value="unavailable">Unavailable</option></select>
+      <select aria-label="Tag" class="border rounded-md p-2 bg-background" [(ngModel)]="tagFilter" (change)="applyFilters()"><option value="">All tags</option><option *ngFor="let tag of availableTags" [value]="tag.id">{{tag.name}}</option></select>
+      <select aria-label="Sort" class="border rounded-md p-2 bg-background" [(ngModel)]="sort" (change)="applyFilters()"><option value="newest">Recently added</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option><option value="size">Largest first</option></select>
+      <button hlmBtn variant="outline" (click)="viewMode=viewMode==='grid'?'table':'grid'">{{viewMode==='grid'?'Table view':'Grid view'}}</button>
+    </div>
+    <p *ngIf="error" role="alert" class="p-4 text-destructive">{{error}} <button hlmBtn (click)="loadVideos()">Retry</button></p>
+    <p *ngIf="isLoading" role="status" class="p-4">Loading videos…</p>
+    <p *ngIf="!isLoading&&!filteredVideos.length" class="p-6 text-muted-foreground">No videos match these filters.</p>
+    <div *ngIf="viewMode==='grid'" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-6"><article *ngFor="let video of filteredVideos" class="border rounded-xl overflow-hidden"><button class="w-full" (click)="playVideo(video)" [attr.aria-label]="'Play '+video.title"><img [src]="video.thumbnailUrl" [alt]="video.title" loading="lazy" class="w-full aspect-video object-cover"></button><div class="p-3 space-y-2"><label class="flex gap-2"><input type="checkbox" [checked]="selectedVideos.has(video.id)" (change)="toggleVideoSelection(video.id)">{{video.title}}</label><p class="text-xs text-muted-foreground">{{video.sourceType==='external'?'External · read-only original':'Uploaded'}} · {{video.availability}}</p><button hlmBtn variant="ghost" (click)="details(video)">Details</button></div></article></div>
     <!-- Bulk Action Bar -->
     <div *ngIf="selectedVideos.size > 0" class="bg-muted/30 border-b px-4 py-3 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
       <span class="text-sm font-medium">{{selectedVideos.size}} video(s) selected</span>
-      <div class="flex space-x-2">
+      <div class="flex flex-wrap gap-2"><select aria-label="Bulk category" class="border rounded p-2 bg-background" [(ngModel)]="bulkCategory"><option value="">No category</option><option *ngFor="let cat of categories" [value]="cat.id">{{cat.name}}</option></select><button hlmBtn variant="outline" size="sm" (click)="bulkAssignCategory()">Assign category</button>
         <button hlmBtn variant="outline" size="sm" (click)="bulkUpdateTags()">
           <ng-icon hlm name="lucideTag" class="mr-2 h-4 w-4"></ng-icon> Update Tags
         </button>
@@ -90,12 +101,12 @@
     </div>
 
     <!-- Desktop Table -->
-    <div class="hidden md:block overflow-x-auto">
+    <div class="hidden md:block overflow-x-auto" *ngIf="viewMode==='table'">
       <table hlmTable class="w-full">
         <thead hlmTrow>
           <th hlmTh class="w-[50px] pl-4">
-            <input type="checkbox" 
-                   [checked]="isAllSelected()" 
+            <input type="checkbox"
+                   [checked]="isAllSelected()"
                    (change)="toggleSelectAll($event)"
                    class="rounded border-input text-primary focus:ring-primary h-4 w-4" />
           </th>
@@ -110,23 +121,23 @@
         <tbody class="[&_tr:last-child]:border-0">
           <tr hlmTrow *ngFor="let element of filteredVideos" [class.bg-muted]="selectedVideos.has(element.id)">
             <td hlmTd class="pl-4">
-              <input type="checkbox" 
-                     [checked]="selectedVideos.has(element.id)" 
+              <input type="checkbox"
+                     [checked]="selectedVideos.has(element.id)"
                      (change)="toggleVideoSelection(element.id)"
                      class="rounded border-input text-primary focus:ring-primary h-4 w-4" />
             </td>
             <td hlmTd>
-              <div class="relative w-24 h-16 rounded overflow-hidden cursor-pointer group bg-black" (click)="playVideo(element)">
-                <img [src]="getThumbnailUrl(element.thumbnailUrl)" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+              <button type="button" [attr.aria-label]="'Play '+element.title" class="relative w-24 h-16 rounded overflow-hidden cursor-pointer group bg-black" (click)="playVideo(element)">
+                <img [alt]="element.title" loading="lazy" [src]="getThumbnailUrl(element.thumbnailUrl)" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                 <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
                   <ng-icon hlm name="lucideCirclePlay" class="h-8 w-8 text-white drop-shadow-md"></ng-icon>
                 </div>
-              </div>
+              </button>
             </td>
             <td hlmTd>
               <div class="flex flex-col">
                 <span class="font-medium truncate max-w-[200px]">{{element.title || 'Untitled'}}</span>
-                <span class="text-xs text-muted-foreground truncate max-w-[200px]">{{element.originalFilename}}</span>
+                <span class="text-xs text-muted-foreground truncate max-w-[200px]">{{element.originalFilename}}</span><span class="text-xs text-muted-foreground">{{element.sourceType==='external'?'External · read-only original':'Uploaded'}} · {{element.availability}}</span>
               </div>
             </td>
             <td hlmTd>
@@ -149,7 +160,7 @@
             <td hlmTd class="whitespace-nowrap">{{ formatDuration(element.durationSeconds) }}</td>
             <td hlmTd class="whitespace-nowrap">{{ formatBytes(element.sizeBytes) }}</td>
             <td hlmTd>
-              <div class="flex space-x-2">
+              <div class="flex space-x-2"><button hlmBtn variant="ghost" (click)="details(element)">Details</button>
                 <button hlmBtn variant="ghost" size="icon" (click)="updateTags(element)" title="Manage Tags">
                   <ng-icon hlm name="lucideTag" class="h-4 w-4 text-muted-foreground hover:text-primary transition-colors"></ng-icon>
                 </button>
@@ -170,17 +181,17 @@
         <input hlmInput placeholder="Search videos..." class="pl-9 w-full" [value]="searchQuery" (input)="onSearchChange($event)" />
       </div>
     </div>
-    
-    <div class="md:hidden divide-y mt-2">
+
+    <div class="md:hidden divide-y mt-2" *ngIf="viewMode==='table'">
       <div *ngFor="let element of filteredVideos" class="flex p-4 gap-4" [class.bg-muted]="selectedVideos.has(element.id)">
         <div class="flex items-center">
-          <input type="checkbox" 
-                 [checked]="selectedVideos.has(element.id)" 
+          <input type="checkbox"
+                 [checked]="selectedVideos.has(element.id)"
                  (change)="toggleVideoSelection(element.id)"
                  class="rounded border-input text-primary focus:ring-primary h-5 w-5" />
         </div>
         <div class="relative w-24 h-16 shrink-0 rounded overflow-hidden bg-black" (click)="playVideo(element)">
-          <img [src]="getThumbnailUrl(element.thumbnailUrl)" class="w-full h-full object-cover opacity-80" />
+          <img [alt]="element.title" loading="lazy" [src]="getThumbnailUrl(element.thumbnailUrl)" class="w-full h-full object-cover opacity-80" />
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium truncate">{{element.title || element.originalFilename}}</p>
@@ -210,5 +221,6 @@
         </div>
       </div>
     </div>
+    <footer class="flex items-center justify-between p-6 border-t gap-4"><span class="text-sm text-muted-foreground">{{total}} videos · Page {{page}}</span><div class="flex gap-2"><button hlmBtn variant="outline" [disabled]="page<=1||isLoading" (click)="changePage(-1)">Previous</button><button hlmBtn variant="outline" [disabled]="!hasMore||isLoading" (click)="changePage(1)">Next</button></div></footer>
   </section>
 </div>

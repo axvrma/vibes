@@ -1,7 +1,7 @@
 import db, { initDb } from '../db/index';
 import * as argon2 from 'argon2';
 import readline from 'readline';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,7 +27,7 @@ const question = async (query: string, hidden: boolean = false): Promise<string>
       (rl as any).output.write(stringToWrite);
     };
   }
-  
+
   (rl as any).output.write(query);
   const { value, done } = await rlIterator.next();
   return done ? '' : value;
@@ -60,12 +60,12 @@ async function createAdmin() {
   }
 
   const password = await question('Password: ', true);
-  
+
   // Reset output write behavior early in case of error prints
   (rl as any)._writeToOutput = function _writeToOutput(stringToWrite: string) {
     (rl as any).output.write(stringToWrite);
   };
-  
+
   console.log(); // newline after password
 
   if (password.length < 12) {
@@ -74,11 +74,11 @@ async function createAdmin() {
   }
 
   const confirmPassword = await question('Confirm password: ', true);
-  
+
   (rl as any)._writeToOutput = function _writeToOutput(stringToWrite: string) {
     (rl as any).output.write(stringToWrite);
   };
-  
+
   console.log(); // newline after confirm password
 
   if (password !== confirmPassword) {
@@ -88,7 +88,7 @@ async function createAdmin() {
 
   try {
     const password_hash = await argon2.hash(password);
-    
+
     db.prepare(`
       INSERT INTO users (id, email, password_hash, role, is_active, created_at, updated_at)
       VALUES (?, ?, ?, 'admin', 1, datetime('now'), datetime('now'))

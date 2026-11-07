@@ -1,7 +1,7 @@
 export const REPO = "https://github.com/axvrma/vibes";
 export const SOURCE = `${REPO}/tree/master`;
 export const deployCommand =
-  "git clone https://github.com/axvrma/vibes.git\ncd vibes/infra\ndocker compose up -d --build";
+  "git clone https://github.com/axvrma/vibes.git\ncd vibes/infra\ntest -f .env || cp .env.example .env\n${EDITOR:-vi} .env\ndocker compose config -q && docker compose up -d --build";
 
 export const feed = [
   {

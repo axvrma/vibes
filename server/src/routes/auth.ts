@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import * as argon2 from 'argon2';
 import * as jose from 'jose';
 import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from 'crypto';
 import db from '../db/index';
 import { authenticate, requireActiveUser } from '../middleware/auth';
 import { z } from 'zod';
@@ -33,14 +33,14 @@ const issuer = process.env.AUTH_ISSUER || 'reels-private-media';
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string(),
+  password: z.string().min(1).max(1024),
   clientType: z.enum(['dashboard', 'mobile']),
   deviceName: z.string().optional()
 });
 
 const signupSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(12).max(1024),
   clientType: z.enum(['dashboard', 'mobile']),
   deviceName: z.string().optional()
 });
@@ -72,7 +72,7 @@ const createRefreshToken = (userId: string, clientType: string, deviceName: stri
   return { plainToken, tokenId, expiresAt };
 };
 
-router.post('/signup', async (req, res) => {
+router.post('/signup', loginLimiter, async (req, res) => {
   try {
     const { email, password, clientType, deviceName } = signupSchema.parse(req.body);
 
@@ -84,7 +84,7 @@ router.post('/signup', async (req, res) => {
 
     const passwordHash = await argon2.hash(password);
     const userId = uuidv4();
-    
+
     db.prepare(`
       INSERT INTO users (id, email, password_hash, role, is_active, created_at, updated_at, last_login_at)
       VALUES (?, ?, ?, 'viewer', 1, datetime('now'), datetime('now'), datetime('now'))
@@ -99,7 +99,7 @@ router.post('/signup', async (req, res) => {
       res.cookie(cookieName, plainToken, {
         httpOnly: true,
         sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.AUTH_COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production',
         expires: expiresAt
       });
       res.json({ accessToken, user: userProfile });
@@ -148,7 +148,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       res.cookie(cookieName, plainToken, {
         httpOnly: true,
         sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.AUTH_COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production',
         expires: expiresAt
       });
       res.json({ accessToken, user: userProfile });
@@ -184,7 +184,7 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
     }
 
     const tokenHash = crypto.createHash('sha256').update(plainToken + pepper).digest('hex');
-    
+
     const dbToken = db.prepare('SELECT * FROM refresh_tokens WHERE token_hash = ?').get(tokenHash) as any;
     if (!dbToken) {
       res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Invalid refresh token.' } });
@@ -209,10 +209,12 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
       return;
     }
 
-    // Rotate token
-    db.prepare('UPDATE refresh_tokens SET replaced_by_token_id = ? WHERE id = ?').run('pending', dbToken.id);
-    const { plainToken: newPlainToken, expiresAt, tokenId: newTokenId } = createRefreshToken(user.id, clientType, undefined, req);
-    db.prepare('UPDATE refresh_tokens SET replaced_by_token_id = ? WHERE id = ?').run(newTokenId, dbToken.id);
+    const { plainToken: newPlainToken, expiresAt } = db.transaction(() => {
+      db.prepare('UPDATE refresh_tokens SET replaced_by_token_id = ? WHERE id = ?').run('pending', dbToken.id);
+      const created = createRefreshToken(user.id, clientType, undefined, req);
+      db.prepare('UPDATE refresh_tokens SET replaced_by_token_id = ? WHERE id = ?').run(created.tokenId, dbToken.id);
+      return created;
+    })();
 
     const accessToken = await generateAccessToken(user.id);
     const userProfile = { id: user.id, email: user.email, role: user.role };
@@ -221,7 +223,7 @@ router.post('/refresh', refreshLimiter, async (req, res) => {
       res.cookie(cookieName, newPlainToken, {
         httpOnly: true,
         sameSite: 'strict',
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.AUTH_COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production',
         expires: expiresAt
       });
       res.json({ accessToken, user: userProfile });
@@ -276,7 +278,7 @@ router.get('/sessions', authenticate, requireActiveUser, (req, res) => {
       params.push(req.user!.id);
     }
     query += ' ORDER BY u.email ASC, r.created_at DESC';
-    
+
     const sessions = db.prepare(query).all(...params);
     res.json({ sessions });
   } catch (error) {
@@ -289,17 +291,17 @@ router.delete('/sessions/:id', authenticate, requireActiveUser, (req, res) => {
   try {
     const sessionId = req.params.id;
     const session = db.prepare('SELECT user_id FROM refresh_tokens WHERE id = ?').get(sessionId) as any;
-    
+
     if (!session) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Session not found.' } });
       return;
     }
-    
+
     if (session.user_id !== req.user!.id && req.user!.role !== 'admin') {
       res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not authorized.' } });
       return;
     }
-    
+
     db.prepare("UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE id = ?").run(sessionId);
     res.json({ success: true });
   } catch (error) {

@@ -1,0 +1,13 @@
+# Enable explicitly after verifying the source exists and the drive is mounted:
+# docker compose -f docker-compose.yml -f docker-compose.media.yml up -d --build
+services:
+  server:
+    volumes:
+      - type: bind
+        source: ${MEDIA_HOST_PATH:-/mnt/ssds/nas-drive/Media/Vibes}
+        target: /media/vibes
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      MEDIA_ROOTS: '{"vibes":"/media/vibes"}'

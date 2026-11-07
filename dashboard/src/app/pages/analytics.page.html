@@ -1,7 +1,8 @@
 <div class="flex flex-col space-y-6">
   <header class="flex items-center justify-between">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">Analytics</h1>
+      <p class="text-sm text-muted-foreground">Lifetime totals. Playback position is the latest saved position per user and video, not cumulative watch time. Logical media size includes external originals and is not free disk space.</p>
+<h1 class="text-3xl font-bold tracking-tight">Analytics</h1>
       <p class="text-sm text-muted-foreground mt-1">Platform engagement and storage statistics</p>
     </div>
     <div>
@@ -19,45 +20,45 @@
   <ng-container *ngIf="!isLoading && summary">
     <!-- Top Level Metrics -->
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <app-metric-card 
-        title="Total Active Users" 
-        [value]="summary.totalUsers" 
-        icon="lucideUsers" 
+      <app-metric-card
+        title="Total Active Users"
+        [value]="summary.totalUsers"
+        icon="lucideUsers"
         colorClass="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
       </app-metric-card>
-      
-      <app-metric-card 
-        title="Total Watch Time" 
-        [value]="formatDuration(summary.totalWatchTime)" 
-        icon="lucideClock" 
+
+      <app-metric-card
+        title="Total Saved playback position"
+        [value]="formatDuration(summary.totalWatchTime)"
+        icon="lucideClock"
         colorClass="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
       </app-metric-card>
 
-      <app-metric-card 
-        title="Total Likes" 
-        [value]="summary.totalLikes" 
-        icon="lucideHeart" 
+      <app-metric-card
+        title="Total Likes"
+        [value]="summary.totalLikes"
+        icon="lucideHeart"
         colorClass="bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">
       </app-metric-card>
 
-      <app-metric-card 
-        title="Total Storage Used" 
-        [value]="formatBytes(summary.totalSizeBytes)" 
-        icon="lucideHardDrive" 
+      <app-metric-card
+        title="Total Logical media size"
+        [value]="formatBytes(summary.totalSizeBytes)"
+        icon="lucideHardDrive"
         colorClass="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
       </app-metric-card>
-      
-      <app-metric-card 
-        title="Total Videos" 
-        [value]="summary.totalVideos" 
-        icon="lucideVideo" 
+
+      <app-metric-card
+        title="Total Videos"
+        [value]="summary.totalVideos"
+        icon="lucideVideo"
         colorClass="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
       </app-metric-card>
     </div>
 
     <!-- Leaderboards -->
     <div class="grid gap-6 md:grid-cols-2 mt-4 items-start">
-      
+
       <!-- Top Watched Videos -->
       <section hlmCard class="shadow-sm">
         <div hlmCardHeader class="pb-2">
@@ -66,12 +67,12 @@
             Most Watched Reels
           </h3>
         </div>
-        
+
         <div class="overflow-x-auto">
           <table hlmTable class="w-full">
             <thead hlmTrow>
               <th hlmTh>Video</th>
-              <th hlmTh class="text-right">Watch Time</th>
+              <th hlmTh class="text-right">Saved playback position</th>
             </thead>
             <tbody class="[&_tr:last-child]:border-0">
               <tr hlmTrow *ngFor="let element of summary.topWatched">
@@ -103,7 +104,7 @@
             Most Liked Reels
           </h3>
         </div>
-        
+
         <div class="overflow-x-auto">
           <table hlmTable class="w-full">
             <thead hlmTrow>

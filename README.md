@@ -1,6 +1,8 @@
 # Vibes
 
-A modern, private media ecosystem featuring a TikTok-style vertical scrolling video player app, an Angular web dashboard, and a Node.js backend.
+**Vibes 2.3 — Your Private Video Universe.** A self-hosted Flutter player, Angular dashboard and private media API. Your space. Your stories. Your vibe.
+
+This working tree is a release candidate; see [validation and release blockers](docs/VALIDATION-2.3.md). Start with the [safe upgrade/backup guide](docs/UPGRADE-2.3.md), [release notes](docs/RELEASE-2.3.0.md), [API additions](docs/API-2.3.md) and [brand system](brand/README.md).
 
 ## System Architecture
 
@@ -27,7 +29,7 @@ graph TD
     Dash -->|/api/*| Gateway
     App -->|/app/*| Gateway
     Dash -->|/dashboard/*| Gateway
-    
+
     Gateway --> Server
     Server --> DB
     Server --> Storage
@@ -74,14 +76,16 @@ The easiest way to get the backend and dashboard running is using the provided D
    ```
 2. Build and start the containers:
    ```bash
+   cp .env.example .env
+   # Configure distinct secrets and the exact browser origin in .env first.
    docker compose up -d --build
    ```
 
 The Compose project (stack) is named `vibes`, with containers named `vibes-server-1` and `vibes-dashboard-1`.
 
 **Services started:**
-- **Server API**: Available at `http://localhost:3000`
-- **Dashboard**: Available at `http://localhost:80` (or your mapped port)
+- **Server API**: Available through `http://127.0.0.1:9001/api/`
+- **Dashboard**: Available at `http://127.0.0.1:9001/dashboard/`
 - *Note: Application data (like sqlite database and media files) is persisted in a local Docker volume (`vibes_data`).*
 
 ---
@@ -93,6 +97,6 @@ If you wish to run the components independently for development, check the READM
 - [Video Feed App (Flutter)](app/README.md)
 
 ### Deployment (Docker)
-The easiest way to get the entire ecosystem running seamlessly is using the provided Docker Compose configuration in the `infra` folder. This uses an NGINX API Gateway to serve everything on a single port (Port 80).
+The easiest way to get the entire ecosystem running seamlessly is using the provided Docker Compose configuration in the `infra` folder. This uses an NGINX API Gateway to serve everything on a single port (internal port 80, exposed on loopback port 9001).
 
 Read the [Infra Deployment Guide](infra/README.md) for full instructions on how to deploy this stack from scratch.

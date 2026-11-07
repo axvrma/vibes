@@ -1,6 +1,8 @@
+> Vibes 2.3 keeps Local and Network modes. Android uses persisted read-only document-tree grants; iOS/macOS use security-scoped bookmarks. Windows/Linux use readable filesystem folders; optional local thumbnails there require ffmpeg. Web offers Network Mode only. No broad storage grant is requested. Local identities use bounded content fingerprints with legacy state migration when available; cross-account network notes are namespaced. See [validation](../docs/VALIDATION-2.3.md) for native build and hardware limits.
+
 # Vibes Application (Flutter)
 
-A modern, high-performance TikTok-style video application built using Flutter. This app features vertical scrolling, likes, interactive notes, and fully seamless auto-play logic with background audio support. 
+A modern, high-performance TikTok-style video application built using Flutter. This app features vertical scrolling, likes, interactive notes, and fully seamless auto-play logic with background audio support.
 
 It is completely cross-platform and natively supports **Mobile (Android/iOS)**, **Web**, and **Desktop (macOS, Windows, Linux)**.
 

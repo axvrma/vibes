@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../../../core/config/settings_repository.dart';
 import 'mode_selection_screen.dart';
 
@@ -25,7 +24,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: const Color(0xFF151016),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -34,20 +33,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              const HugeIcon(
-                icon: HugeIcons.strokeRoundedPlay,
-                size: 100.0,
-                color: Color(0xFFE040FB),
+              Image.asset(
+                'assets/icons/app_icon.png',
+                width: 100,
+                height: 100,
+                semanticLabel: 'Vibes',
               ),
               const SizedBox(height: 32),
               const Text(
                 'Welcome to Vibes',
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               const Text(
-                'Your personal space for discovering and streaming short-form video content.',
+                'Your Private Video Universe.\nYour space. Your stories. Your vibe.',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
@@ -55,12 +59,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ElevatedButton(
                 onPressed: _onNext,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE040FB),
-                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFFFF3D81),
+                  foregroundColor: const Color(0xFF211725),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Get Started',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
               const SizedBox(height: 16),
             ],

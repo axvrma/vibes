@@ -9,12 +9,11 @@ AdaptiveVideoController createPlatformVideoController() {
 
 class WebVideoController implements AdaptiveVideoController {
   final Player _player = Player(
-    configuration: const PlayerConfiguration(
-      title: 'vibes',
-    ),
+    configuration: const PlayerConfiguration(title: 'vibes'),
   );
   VideoController? _videoController;
-  
+
+  bool _disposed = false;
   bool _isPlaying = false;
   bool _hasError = false;
   bool _isBuffering = false;
@@ -29,12 +28,12 @@ class WebVideoController implements AdaptiveVideoController {
       _isPlaying = playing;
       _notifyListeners();
     });
-    
+
     _player.stream.position.listen((position) {
       _position = position;
       _notifyListeners();
     });
-    
+
     _player.stream.duration.listen((duration) {
       _duration = duration;
       _notifyListeners();
@@ -81,42 +80,85 @@ class WebVideoController implements AdaptiveVideoController {
   Future<void>? _initFuture;
 
   @override
-  Future<void> initialize(Uri url, {Object? file, Map<String, String>? headers}) async {
+  Future<void> initialize(
+    Uri url, {
+    Object? file,
+    Map<String, String>? headers,
+  }) async {
     _videoController = VideoController(_player);
     // Web does not support local files using dart:io File
-    _initFuture = _player.open(Media(url.toString(), httpHeaders: headers), play: false);
-    await _initFuture;
+    _initFuture = _player.open(
+      Media(url.toString(), httpHeaders: headers),
+      play: false,
+    );
+    try {
+      await _initFuture;
+    } catch (error) {
+      if (!_disposed) {
+        _hasError = true;
+        _errorDescription = error.toString();
+        _notifyListeners();
+      }
+    }
   }
 
   @override
   Future<void> play() async {
-    if (_initFuture != null) await _initFuture;
+    if (_disposed) return;
+    if (_initFuture != null) {
+      try {
+        await _initFuture;
+      } catch (_) {
+        return;
+      }
+    }
+    if (_disposed) return;
     await _player.play();
   }
 
   @override
   Future<void> pause() async {
-    if (_initFuture != null) await _initFuture;
+    if (_disposed) return;
+    if (_initFuture != null) {
+      try {
+        await _initFuture;
+      } catch (_) {
+        return;
+      }
+    }
+    if (_disposed) return;
     await _player.pause();
   }
 
   @override
   Future<void> seekTo(Duration position) async {
-    await _player.seek(position);
+    if (!_disposed) await _player.seek(position);
   }
 
   @override
   Future<void> setLooping(bool looping) async {
-    await _player.setPlaylistMode(looping ? PlaylistMode.single : PlaylistMode.none);
+    if (!_disposed) {
+      await _player.setPlaylistMode(
+        looping ? PlaylistMode.single : PlaylistMode.none,
+      );
+    }
   }
 
   @override
   Future<void> setPlaybackRate(double rate) async {
-    await _player.setRate(rate);
+    if (!_disposed) await _player.setRate(rate);
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    if (!_disposed) await _player.setVolume(volume);
   }
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _listeners.clear();
     _player.dispose();
   }
 
@@ -131,7 +173,8 @@ class WebVideoController implements AdaptiveVideoController {
   }
 
   void _notifyListeners() {
-    for (var listener in _listeners) {
+    if (_disposed) return;
+    for (var listener in List<VoidCallback>.from(_listeners)) {
       listener();
     }
   }
@@ -155,7 +198,7 @@ class PlatformVideoPlayerWidget extends StatelessWidget {
     if (webController.videoController == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     return Video(
       controller: webController.videoController!,
       fit: fit,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config/settings_repository.dart';
+import 'core/config/brand_tokens.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/welcome_screen.dart';
@@ -20,13 +21,15 @@ void main() async {
   await Hive.initFlutter();
   await Hive.openBox('videoData');
   await Hive.openBox('settingsData');
-  
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Color(0xFF0A0A0F),
-  ));
-  
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF151016),
+    ),
+  );
+
   runApp(const VibesApp());
 }
 
@@ -36,44 +39,53 @@ class VibesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
-      valueListenable: Hive.box('settingsData').listenable(keys: [SettingsRepository.keyIsDarkMode]),
+      valueListenable: Hive.box(
+        'settingsData',
+      ).listenable(keys: [SettingsRepository.keyIsDarkMode]),
       builder: (context, box, child) {
-        final isDarkMode = box.get(SettingsRepository.keyIsDarkMode, defaultValue: true);
+        final isDarkMode = box.get(
+          SettingsRepository.keyIsDarkMode,
+          defaultValue: true,
+        );
         return MaterialApp(
           title: 'Vibes',
           debugShowCheckedModeBanner: false,
           themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          theme: ThemeData(
-            brightness: Brightness.light,
-            scaffoldBackgroundColor: Colors.white,
-            primaryColor: const Color(0xFFE040FB),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-            ),
-            textTheme: const TextTheme(
-              bodyLarge: TextStyle(color: Colors.black),
-              bodyMedium: TextStyle(color: Colors.black87),
-            ),
-          ),
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF0A0A0F),
-            primaryColor: const Color(0xFFE040FB),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF0A0A0F),
-              foregroundColor: Colors.white,
-            ),
-            textTheme: const TextTheme(
-              bodyLarge: TextStyle(color: Colors.white),
-              bodyMedium: TextStyle(color: Colors.white70),
-            ),
-          ),
+          theme: _theme(Brightness.light),
+          darkTheme: _theme(Brightness.dark),
           home: const InitialRouteWidget(),
         );
       },
     );
   }
+}
+
+ThemeData _theme(Brightness brightness) {
+  final dark = brightness == Brightness.dark;
+  final scheme = ColorScheme.fromSeed(
+    seedColor: dark ? VibesTokens.darkPrimary : VibesTokens.lightPrimary,
+    brightness: brightness,
+    surface: dark ? VibesTokens.darkSurface : VibesTokens.lightSurface,
+  );
+  return ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorScheme: scheme.copyWith(
+      onPrimary: dark ? VibesTokens.lightText : Colors.white,
+      primary: dark ? VibesTokens.darkPrimary : VibesTokens.lightPrimary,
+    ),
+    fontFamily: 'Inter',
+    scaffoldBackgroundColor: dark
+        ? VibesTokens.darkBackground
+        : VibesTokens.lightBackground,
+    visualDensity: VisualDensity.standard,
+    inputDecorationTheme: const InputDecorationTheme(
+      border: OutlineInputBorder(),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+    ),
+  );
 }
 
 class InitialRouteWidget extends StatefulWidget {
@@ -92,7 +104,7 @@ class _InitialRouteWidgetState extends State<InitialRouteWidget> {
     if (!_settings.hasSeenWelcome) {
       return const WelcomeScreen();
     }
-    
+
     if (!_settings.hasSelectedMode) {
       return const ModeSelectionScreen();
     }
@@ -106,9 +118,7 @@ class _InitialRouteWidgetState extends State<InitialRouteWidget> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
         if (snapshot.hasData && snapshot.data == true) {

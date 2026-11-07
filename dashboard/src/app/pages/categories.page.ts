@@ -1,3 +1,4 @@
+import { FeedbackService } from '../shared/components/confirmation-dialog.component';
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -42,19 +43,20 @@ import { lucidePlus, lucideTrash2, lucideFolder, lucideTag, lucideX } from '@ng-
   templateUrl: './categories.page.html'
 })
 export class CategoriesPage implements OnInit {
+  private feedback=inject(FeedbackService);
   private api = inject(MediaApiService);
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
-  
+
   categories: any[] = [];
   availableTags: any[] = [];
   allVideos: any[] = [];
-  
+
   isEditing = false;
   isCreating = false;
   editingId: string | null = null;
   currentTags: any[] = []; // Used to display tags for the category being edited
-  
+
   categoryForm = this.fb.group({
     name: ['', Validators.required],
     slug: ['', Validators.required],
@@ -76,16 +78,9 @@ export class CategoriesPage implements OnInit {
       this.availableTags = t;
       this.cdr.detectChanges();
     });
-    // Fetch videos to calculate video counts per category
-    this.api.getVideos().subscribe(res => {
-      this.allVideos = res.videos || [];
-      this.cdr.detectChanges();
-    });
   }
 
-  getVideoCount(categoryId: string): number {
-    return this.allVideos.filter(v => v.category && v.category.id === categoryId).length;
-  }
+  getVideoCount(categoryId:string):number {return this.categories.find(c=>c.id===categoryId)?.video_count||0;}
 
   generateSlug() {
     if (this.isCreating) {
@@ -109,7 +104,7 @@ export class CategoriesPage implements OnInit {
     this.isCreating = false;
     this.editingId = cat.id;
     this.currentTags = cat.tags || [];
-    
+
     this.categoryForm.patchValue({
       name: cat.name,
       slug: cat.slug,
@@ -150,16 +145,16 @@ export class CategoriesPage implements OnInit {
     }
   }
 
-  deleteCategory(event: Event, cat: any) {
+  async deleteCategory(event: Event, cat: any) {
     event.stopPropagation();
     const count = this.getVideoCount(cat.id);
-    
+
     if (count > 0) {
-      alert(`Cannot delete category "${cat.name}" because it has ${count} associated videos. Reassign videos first.`);
+      this.feedback.alert(`Cannot delete category "${cat.name}" because it has ${count} associated videos. Reassign videos first.`);
       return;
     }
 
-    if (window.confirm(`Are you sure you want to delete category "${cat.name}"? This action cannot be undone.`)) {
+    if (await this.feedback.confirm(`Are you sure you want to delete category "${cat.name}"? This action cannot be undone.`)) {
       this.api.deleteCategory(cat.id).subscribe({
         next: () => {
           if (this.editingId === cat.id) {
@@ -197,6 +192,6 @@ export class CategoriesPage implements OnInit {
   }
 
   handleError(err: any) {
-    alert(err.error?.error?.message || 'Operation failed');
+    this.feedback.alert(err.error?.error?.message || 'Operation failed');
   }
 }

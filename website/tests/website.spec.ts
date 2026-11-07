@@ -174,7 +174,7 @@ test("copy control copies exact Docker commands", async ({ page, context }) => {
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe(
-      "git clone https://github.com/axvrma/vibes.git\ncd vibes/infra\ndocker compose up -d --build",
+      "git clone https://github.com/axvrma/vibes.git\ncd vibes/infra\ntest -f .env || cp .env.example .env\n${EDITOR:-vi} .env\ndocker compose config -q && docker compose up -d --build",
     );
 });
 

@@ -1,3 +1,5 @@
+> Vibes 2.3: Node 22.17+ (22.x); see [API contracts](../docs/API-2.3.md), [upgrade/backup guide](../docs/UPGRADE-2.3.md) and [validation](../docs/VALIDATION-2.3.md). Production requires explicit AUTH_ACCESS_TOKEN_SECRET and AUTH_REFRESH_TOKEN_PEPPER. MEDIA_ROOTS defaults to no authorized external roots.
+
 # Vibes Backend Server (Node.js)
 
 The core engine powering the Vibes application. It's built on Express.js and utilizes `better-sqlite3` for a lightning-fast, zero-configuration local database.

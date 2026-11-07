@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 MaterialPageRoute(builder: (_) => const ModeSelectionScreen()),
               );
             },
-          )
+          ),
         ],
       ),
       body: Center(
@@ -96,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(
                   Icons.play_circle_filled,
                   size: 80.0,
-                  color: Color(0xFFE040FB),
+                  color: Color(0xFFFF3D81),
                 ),
                 const SizedBox(height: 32),
                 const Text(
@@ -110,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red),
                     ),
@@ -125,7 +125,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email, color: Colors.grey, size: 24.0),
+                    prefixIcon: Icon(
+                      Icons.email,
+                      color: Colors.grey,
+                      size: 24.0,
+                    ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -135,10 +139,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.lock, color: Colors.grey, size: 24.0),
+                    prefixIcon: const Icon(
+                      Icons.lock,
+                      color: Colors.grey,
+                      size: 24.0,
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
                         color: Colors.grey,
                       ),
                       onPressed: () {
@@ -157,10 +167,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock, color: Colors.grey, size: 24.0),
+                      prefixIcon: const Icon(
+                        Icons.lock,
+                        color: Colors.grey,
+                        size: 24.0,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          _obscureConfirmPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.grey,
                         ),
                         onPressed: () {
@@ -177,8 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE040FB),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFF3D81),
+                    foregroundColor: const Color(0xFF211725),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -190,12 +206,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Text(
                           _isLogin ? 'Login' : 'Sign Up',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
                 const SizedBox(height: 16),

@@ -41,6 +41,14 @@ export interface VideoRecord {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
+  source_type: 'upload' | 'external';
+  library_id?: string;
+  relative_path?: string;
+  mtime_ms?: number;
+  fingerprint?: string;
+  availability: string;
+  last_observed_scan?: string;
+  metadata_overridden: number;
 }
 
 export interface TagRecord {
@@ -67,7 +75,7 @@ export const categoryRepo = {
     `);
     return stmt.run(cat);
   },
-  
+
   update: (id: string, cat: Partial<CategoryRecord>) => {
     const fields = Object.keys(cat).map(k => `${k} = @${k}`).join(', ');
     const stmt = db.prepare(`UPDATE categories SET ${fields} WHERE id = @id`);
@@ -110,14 +118,14 @@ export const videoRepo = {
   create: (video: Partial<VideoRecord>) => {
     const stmt = db.prepare(`
       INSERT INTO videos (
-        id, title, original_filename, storage_key, mime_type, 
-        size_bytes, duration_seconds, width, height, codec, 
-        audio_codec, thumbnail_path, processing_status, 
+        id, title, original_filename, storage_key, mime_type,
+        size_bytes, duration_seconds, width, height, codec,
+        audio_codec, thumbnail_path, processing_status,
         processing_error, category_id, created_at, updated_at
       ) VALUES (
-        @id, @title, @original_filename, @storage_key, @mime_type, 
-        @size_bytes, @duration_seconds, @width, @height, @codec, 
-        @audio_codec, @thumbnail_path, @processing_status, 
+        @id, @title, @original_filename, @storage_key, @mime_type,
+        @size_bytes, @duration_seconds, @width, @height, @codec,
+        @audio_codec, @thumbnail_path, @processing_status,
         @processing_error, @category_id, @created_at, @updated_at
       )
     `);
@@ -143,7 +151,7 @@ export const videoRepo = {
   },
 
   updateCategory: (videoId: string, categoryId: string | null) => {
-    return db.prepare('UPDATE videos SET category_id = ?, updated_at = datetime("now") WHERE id = ?').run(categoryId, videoId);
+    return db.prepare("UPDATE videos SET category_id = ?, metadata_overridden = 1, updated_at = datetime('now') WHERE id = ?").run(categoryId, videoId);
   },
 
   getById: (id: string) => {
@@ -155,12 +163,12 @@ export const videoRepo = {
     const params: any[] = [];
 
     if (categoryId) {
-      query += ` AND id IN (
+      query += ` AND (id IN (
         SELECT vt.video_id FROM video_tags vt
         JOIN category_tags ct ON vt.tag_id = ct.tag_id
         WHERE ct.category_id = ?
-      )`;
-      params.push(categoryId);
+      ) OR category_id = ?)`;
+      params.push(categoryId,categoryId);
     } else if (includeUncategorized) {
       query += ' AND id NOT IN (SELECT video_id FROM video_tags)';
     }
@@ -193,7 +201,7 @@ export const videoRepo = {
     const totalTagsRow = db.prepare('SELECT COUNT(*) as c FROM tags').get() as { c: number };
     const statsRow = db.prepare('SELECT SUM(liked) as totalLikes, SUM(progress_seconds) as totalWatchTime FROM user_video_state').get() as { totalLikes: number, totalWatchTime: number };
     const totalUsersRow = db.prepare('SELECT COUNT(*) as c FROM users WHERE is_active = 1').get() as { c: number };
-    
+
     const topWatched = db.prepare('SELECT v.id, v.title, v.original_filename, SUM(s.progress_seconds) as total_watch_time FROM videos v JOIN user_video_state s ON v.id = s.video_id WHERE v.deleted_at IS NULL GROUP BY v.id ORDER BY total_watch_time DESC LIMIT 5').all();
     const topLiked = db.prepare('SELECT v.id, v.title, v.original_filename, SUM(s.liked) as likes FROM videos v JOIN user_video_state s ON v.id = s.video_id WHERE v.deleted_at IS NULL GROUP BY v.id ORDER BY likes DESC LIMIT 5').all();
 
@@ -292,22 +300,22 @@ export const userRepo = {
   }
 };
 
-function _attachDetailsToVideos(videos: VideoRecord[]) {
+export function _attachDetailsToVideos(videos: VideoRecord[]) {
   if (videos.length === 0) return [];
 
   const categoryIds = Array.from(new Set(videos.map(v => v.category_id).filter(Boolean)));
-  const categories = categoryIds.length > 0 
+  const categories = categoryIds.length > 0
     ? db.prepare(`SELECT * FROM categories WHERE id IN (${categoryIds.map(() => '?').join(',')})`).all(...categoryIds) as CategoryRecord[]
     : [];
 
   const tagStmt = db.prepare(`
-    SELECT t.*, vt.video_id 
-    FROM tags t 
-    JOIN video_tags vt ON t.id = vt.tag_id 
+    SELECT t.*, vt.video_id
+    FROM tags t
+    JOIN video_tags vt ON t.id = vt.tag_id
     WHERE vt.video_id IN (${videos.map(() => '?').join(',')})
   `);
   const tags = tagStmt.all(...videos.map(v => v.id)) as (TagRecord & { video_id: string })[];
-  
+
   const catTags = db.prepare('SELECT * FROM category_tags').all() as {category_id: string, tag_id: string}[];
   const allCategories = db.prepare('SELECT * FROM categories').all() as CategoryRecord[];
 
@@ -317,7 +325,7 @@ function _attachDetailsToVideos(videos: VideoRecord[]) {
       return rest;
     });
     let category = categories.find(c => c.id === video.category_id) || null;
-    
+
     if (!category) {
       for (const tag of videoTags) {
         const ct = catTags.find(ct => ct.tag_id === tag.id);

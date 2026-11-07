@@ -1,56 +1,60 @@
 <ng-container *ngIf="auth.user$ | async as user; else unauthenticated">
   <div class="flex h-screen w-full bg-background overflow-hidden text-foreground">
-    
+
     <!-- Sidebar -->
-    <aside 
+    <aside
       class="fixed inset-y-0 left-0 z-40 w-64 transform border-r bg-card transition-transform duration-300 ease-in-out md:relative md:translate-x-0"
       [class.-translate-x-full]="!(isSidebarOpen || ((isHandset$ | async) === false))">
-      
+
       <div class="flex h-16 items-center border-b px-6">
-        <ng-icon hlm name="lucideClapperboard" class="mr-3 h-6 w-6 text-primary"></ng-icon>
+        <img src="brand.svg" alt="" width="32" height="32" class="mr-3">
         <div class="flex flex-col">
-          <span class="text-lg font-bold leading-tight">Reels Library</span>
-          <span class="text-xs text-muted-foreground">Private Media Server</span>
+          <span class="text-lg font-bold leading-tight">Vibes</span>
+          <span class="text-xs text-muted-foreground">Your Private Video Universe</span>
         </div>
       </div>
 
-      <nav class="flex-1 overflow-y-auto py-4">
+      <nav aria-label="Main navigation" class="flex-1 overflow-y-auto py-4" (click)="isSidebarOpen=false">
         <ul class="space-y-1 px-3">
           <li>
-            <a routerLink="/dashboard" routerLinkActive="bg-accent text-accent-foreground" [routerLinkActiveOptions]="{exact: true}" 
+            <a routerLink="/dashboard" routerLinkActive="bg-accent text-accent-foreground" [routerLinkActiveOptions]="{exact: true}"
                class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
               <ng-icon hlm name="lucideLayoutDashboard" class="mr-3 h-4 w-4"></ng-icon>
-              Videos
+              Overview
             </a>
           </li>
+          <li><a routerLink="/dashboard/videos" routerLinkActive="bg-accent text-accent-foreground" (click)="isSidebarOpen=false" class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"><ng-icon hlm name="lucideClapperboard" class="mr-3 h-4 w-4"></ng-icon>Videos</a></li>
+          <li><a routerLink="/dashboard/libraries" routerLinkActive="bg-accent text-accent-foreground" (click)="isSidebarOpen=false" class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"><ng-icon hlm name="lucideFolder" class="mr-3 h-4 w-4"></ng-icon>Media Libraries</a></li>
           <li>
-            <a routerLink="/dashboard/categories" routerLinkActive="bg-accent text-accent-foreground" 
+            <a routerLink="/dashboard/categories" routerLinkActive="bg-accent text-accent-foreground"
                class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
               <ng-icon hlm name="lucideFolder" class="mr-3 h-4 w-4"></ng-icon>
               Categories
             </a>
           </li>
           <li>
-            <a routerLink="/dashboard/tags" routerLinkActive="bg-accent text-accent-foreground" 
+            <a routerLink="/dashboard/tags" routerLinkActive="bg-accent text-accent-foreground"
                class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
               <ng-icon hlm name="lucideTag" class="mr-3 h-4 w-4"></ng-icon>
               Tags
             </a>
           </li>
           <li *ngIf="user.role === 'admin'">
-            <a routerLink="/dashboard/users" routerLinkActive="bg-accent text-accent-foreground" 
+            <a routerLink="/dashboard/users" routerLinkActive="bg-accent text-accent-foreground"
                class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
               <ng-icon hlm name="lucideUsers" class="mr-3 h-4 w-4"></ng-icon>
               Users
             </a>
           </li>
           <li *ngIf="user.role === 'admin'">
-            <a routerLink="/dashboard/analytics" routerLinkActive="bg-accent text-accent-foreground" 
+            <a routerLink="/dashboard/analytics" routerLinkActive="bg-accent text-accent-foreground"
                class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors">
               <ng-icon hlm name="lucideChartColumn" class="mr-3 h-4 w-4"></ng-icon>
               Analytics
             </a>
           </li>
+
+          <li><a routerLink="/dashboard/settings" routerLinkActive="bg-accent text-accent-foreground" (click)="isSidebarOpen=false" class="flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"><ng-icon hlm name="lucideMonitorSmartphone" class="mr-3 h-4 w-4"></ng-icon>Settings</a></li>
         </ul>
       </nav>
 
@@ -66,8 +70,8 @@
     </aside>
 
     <!-- Overlay for mobile sidebar -->
-    <div 
-      *ngIf="isSidebarOpen && (isHandset$ | async)" 
+    <div
+      *ngIf="isSidebarOpen && (isHandset$ | async)"
       class="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm transition-all duration-100"
       (click)="toggleSidebar()">
     </div>
@@ -75,10 +79,10 @@
     <!-- Main Content -->
     <div class="flex flex-1 flex-col overflow-hidden">
       <header class="flex h-16 items-center justify-between border-b bg-card px-6">
-        <button 
+        <button
           *ngIf="isHandset$ | async"
           hlmBtn variant="ghost" size="icon"
-          (click)="toggleSidebar()" 
+          (click)="toggleSidebar()"
           aria-label="Toggle sidenav">
           <ng-icon hlm name="lucideMenu" class="h-5 w-5"></ng-icon>
         </button>

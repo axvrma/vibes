@@ -3,6 +3,7 @@ import { LazyMotion, MotionConfig } from "motion/react";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { Hero } from "./components/hero/Hero";
+import { Libraries } from "./components/features/Libraries";
 import { Features } from "./components/features/Features";
 import { FeedStory } from "./components/showcase/FeedStory";
 import { Dashboard } from "./components/showcase/Dashboard";
@@ -88,6 +89,7 @@ export default function App() {
               </div>
             </div>
             <Features />
+            <Libraries />
             <FeedStory />
             <Dashboard />
             <HowItWorks />

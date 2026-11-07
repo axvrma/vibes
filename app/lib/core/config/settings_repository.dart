@@ -44,9 +44,17 @@ class SettingsRepository {
     }
     return url;
   }
-  
+
   Future<void> setServerUrl(String url) async {
-    await _box.put(keyServerUrl, url);
+    final parsed = Uri.tryParse(url.trim());
+    if (parsed == null ||
+        (!parsed.hasAuthority && !url.startsWith('/api')) ||
+        (parsed.hasAuthority && !['http', 'https'].contains(parsed.scheme))) {
+      throw const FormatException(
+        'Enter an HTTP or HTTPS server URL ending in /api',
+      );
+    }
+    await _box.put(keyServerUrl, url.trim().replaceFirst(RegExp(r'/+$'), ''));
   }
 
   bool get isLocalMode => _box.get(keyIsLocalMode, defaultValue: false);
@@ -60,6 +68,13 @@ class SettingsRepository {
   Future<void> setLocalFolderPath(String path) async {
     await _box.put(keyLocalFolderPath, path);
   }
+
+  bool get recursiveLocalScan =>
+      _box.get('recursiveLocalScan', defaultValue: false);
+  Future<void> setRecursiveLocalScan(bool value) =>
+      _box.put('recursiveLocalScan', value);
+  int get cacheLimitMb => _box.get('cacheLimitMb', defaultValue: 1024);
+  Future<void> setCacheLimitMb(int value) => _box.put('cacheLimitMb', value);
 
   bool get isDarkMode => _box.get(keyIsDarkMode, defaultValue: true);
 

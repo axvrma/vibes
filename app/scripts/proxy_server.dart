@@ -5,7 +5,7 @@ import 'package:shelf_proxy/shelf_proxy.dart';
 Future<void> main() async {
   // The URL of your actual backend API
   final backendUrl = 'http://localhost:3000';
-  
+
   // Create a shelf handler that proxies requests to the backend
   final proxy = proxyHandler(backendUrl);
 
@@ -16,7 +16,8 @@ Future<void> main() async {
 
   // Serve the proxy on localhost:8080
   final server = await shelf_io.serve(handler, 'localhost', 8080);
-  
+
+  // ignore: avoid_print -- local developer proxy diagnostics
   print('Proxying from http://${server.address.host}:${server.port} to $backendUrl');
 }
 
@@ -31,9 +32,9 @@ Middleware corsHeaders() {
           'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
         });
       }
-      
+
       final response = await innerHandler(request);
-      
+
       // Strip CORP and COOP headers from the backend response which block cross-origin video playback
       final filteredHeaders = <String, String>{};
       for (final entry in response.headers.entries) {
@@ -42,7 +43,7 @@ Middleware corsHeaders() {
           filteredHeaders[entry.key] = entry.value;
         }
       }
-      
+
       // Merge with our permissive CORS headers
       final newHeaders = {
         ...filteredHeaders,
@@ -51,7 +52,7 @@ Middleware corsHeaders() {
         'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization, Range',
         'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
       };
-      
+
       return Response(
         response.statusCode,
         body: response.read(),

@@ -1,0 +1,11 @@
+node_modules
+build
+dist
+.dart_tool
+.git
+.env
+*.log
+data
+coverage
+test-results
+playwright-report

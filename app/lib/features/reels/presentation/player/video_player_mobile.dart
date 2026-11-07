@@ -10,12 +10,11 @@ AdaptiveVideoController createPlatformVideoController() {
 
 class MobileVideoController implements AdaptiveVideoController {
   final Player _player = Player(
-    configuration: const PlayerConfiguration(
-      title: 'vibes',
-    ),
+    configuration: const PlayerConfiguration(title: 'vibes'),
   );
   VideoController? _videoController;
-  
+
+  bool _disposed = false;
   bool _isPlaying = false;
   bool _hasError = false;
   bool _isBuffering = false;
@@ -30,12 +29,12 @@ class MobileVideoController implements AdaptiveVideoController {
       _isPlaying = playing;
       _notifyListeners();
     });
-    
+
     _player.stream.position.listen((position) {
       _position = position;
       _notifyListeners();
     });
-    
+
     _player.stream.duration.listen((duration) {
       _duration = duration;
       _notifyListeners();
@@ -76,7 +75,11 @@ class MobileVideoController implements AdaptiveVideoController {
   Future<void>? _initFuture;
 
   @override
-  Future<void> initialize(Uri url, {Object? file, Map<String, String>? headers}) async {
+  Future<void> initialize(
+    Uri url, {
+    Object? file,
+    Map<String, String>? headers,
+  }) async {
     _hasError = false;
     _errorDescription = null;
     _notifyListeners();
@@ -84,40 +87,79 @@ class MobileVideoController implements AdaptiveVideoController {
     if (file != null && file is File) {
       _initFuture = _player.open(Media(file.path), play: false);
     } else {
-      _initFuture = _player.open(Media(url.toString(), httpHeaders: headers), play: false);
+      _initFuture = _player.open(
+        Media(url.toString(), httpHeaders: headers),
+        play: false,
+      );
     }
-    await _initFuture;
+    try {
+      await _initFuture;
+    } catch (error) {
+      if (!_disposed) {
+        _hasError = true;
+        _errorDescription = error.toString();
+        _notifyListeners();
+      }
+    }
   }
 
   @override
   Future<void> play() async {
-    if (_initFuture != null) await _initFuture;
+    if (_disposed) return;
+    if (_initFuture != null) {
+      try {
+        await _initFuture;
+      } catch (_) {
+        return;
+      }
+    }
+    if (_disposed) return;
     await _player.play();
   }
 
   @override
   Future<void> pause() async {
-    if (_initFuture != null) await _initFuture;
+    if (_disposed) return;
+    if (_initFuture != null) {
+      try {
+        await _initFuture;
+      } catch (_) {
+        return;
+      }
+    }
+    if (_disposed) return;
     await _player.pause();
   }
 
   @override
   Future<void> seekTo(Duration position) async {
-    await _player.seek(position);
+    if (!_disposed) await _player.seek(position);
   }
 
   @override
   Future<void> setLooping(bool looping) async {
-    await _player.setPlaylistMode(looping ? PlaylistMode.single : PlaylistMode.none);
+    if (!_disposed) {
+      await _player.setPlaylistMode(
+        looping ? PlaylistMode.single : PlaylistMode.none,
+      );
+    }
   }
 
   @override
   Future<void> setPlaybackRate(double rate) async {
-    await _player.setRate(rate);
+    if (!_disposed) await _player.setRate(rate);
+  }
+
+  @override
+  Future<void> setVolume(double volume) async {
+    if (!_disposed) await _player.setVolume(volume);
   }
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _listeners.clear();
     _player.dispose();
   }
 
@@ -132,7 +174,8 @@ class MobileVideoController implements AdaptiveVideoController {
   }
 
   void _notifyListeners() {
-    for (var listener in _listeners) {
+    if (_disposed) return;
+    for (var listener in List<VoidCallback>.from(_listeners)) {
       listener();
     }
   }
@@ -151,10 +194,12 @@ class PlatformVideoPlayerWidget extends StatefulWidget {
   });
 
   @override
-  State<PlatformVideoPlayerWidget> createState() => _PlatformVideoPlayerWidgetState();
+  State<PlatformVideoPlayerWidget> createState() =>
+      _PlatformVideoPlayerWidgetState();
 }
 
-class _PlatformVideoPlayerWidgetState extends State<PlatformVideoPlayerWidget> with WidgetsBindingObserver {
+class _PlatformVideoPlayerWidgetState extends State<PlatformVideoPlayerWidget>
+    with WidgetsBindingObserver {
   AppLifecycleState _lifecycleState = AppLifecycleState.resumed;
 
   @override
@@ -182,11 +227,14 @@ class _PlatformVideoPlayerWidgetState extends State<PlatformVideoPlayerWidget> w
     if (mobileController.videoController == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     // If not paused by lifecycle (or if we are allowing background audio, we unmount the Video widget
     // to prevent Surface crashes, while letting the audio keep playing).
-    final isBackground = _lifecycleState == AppLifecycleState.paused || _lifecycleState == AppLifecycleState.detached || _lifecycleState == AppLifecycleState.hidden;
-    
+    final isBackground =
+        _lifecycleState == AppLifecycleState.paused ||
+        _lifecycleState == AppLifecycleState.detached ||
+        _lifecycleState == AppLifecycleState.hidden;
+
     if (isBackground && !widget.pauseUponEnteringBackgroundMode) {
       // Unmount the Video widget to prevent rendering to a dead surface, but keep audio playing.
       return const SizedBox.shrink();

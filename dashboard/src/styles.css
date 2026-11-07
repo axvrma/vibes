@@ -1,4 +1,5 @@
 @layer theme, base, components, utilities;
+@import './brand.css';
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
 @import 'tailwindcss/utilities.css';
@@ -106,3 +107,22 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+/* Canonical Vibes tokens, mapped to the existing Helm design system. */
+:root, :root.dark, :root.light {
+ --background:var(--vibes-background); --foreground:var(--vibes-text);
+ --card:var(--vibes-surface); --card-foreground:var(--vibes-text);
+ --popover:var(--vibes-elevated); --popover-foreground:var(--vibes-text);
+ --primary:var(--vibes-primary); --primary-foreground:#211725;
+ --secondary:var(--vibes-elevated); --secondary-foreground:var(--vibes-text);
+ --muted:var(--vibes-elevated); --muted-foreground:var(--vibes-muted);
+ --accent:var(--vibes-elevated); --accent-foreground:var(--vibes-text);
+ --destructive:var(--vibes-destructive); --border:var(--vibes-border);
+ --input:var(--vibes-border); --ring:var(--vibes-focus); --radius:.625rem;
+ --font-sans:Inter,system-ui,sans-serif;
+}
+@font-face {font-family:Inter;src:url('/dashboard/fonts/inter.woff2') format('woff2');font-weight:100 900;font-display:swap;}
+:focus-visible {outline:2px solid var(--ring);outline-offset:3px;}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}}
+
+:root.light {--primary-foreground:#fff;}

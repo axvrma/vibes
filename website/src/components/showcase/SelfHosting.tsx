@@ -155,27 +155,12 @@ export function SelfHosting() {
             </div>
             <div className="terminal-body">
               <p className="terminal-comment">
-                # A little setup. A lot of good vibes.
+                # Configure your private server before starting.
               </p>
               <pre tabIndex={0} aria-label="Deployment commands">
-                {deployCommand.split("\n").map((line, i) => (
+                {deployCommand.split("\n").map((line) => (
                   <code key={line}>
-                    <span className="terminal-dollar">$</span>{" "}
-                    {i === 0 ? (
-                      <>
-                        <span className="cyan">git clone</span>{" "}
-                        https://github.com/axvrma/vibes.git
-                      </>
-                    ) : i === 1 ? (
-                      <>
-                        <span className="cyan">cd</span> vibes/infra
-                      </>
-                    ) : (
-                      <>
-                        <span className="cyan">docker compose</span> up -d
-                        --build
-                      </>
-                    )}
+                    <span className="terminal-dollar">$</span> {line}
                   </code>
                 ))}
               </pre>
@@ -183,9 +168,16 @@ export function SelfHosting() {
             </div>
             <div className="terminal-footer">
               <Server size={13} />
-              <span>Requires Git, Docker & Docker Compose.</span>
+              <span>
+                Requires Git, Docker, Compose and configured .env secrets.
+              </span>
             </div>
           </div>
+          <p className="sample-indicator">
+            In the editor, set two distinct random secrets, your exact browser
+            origin and cookie security. Keep your existing settings when
+            upgrading. See the installation guide for backups and TLS.
+          </p>
           <p className="copy-status" role="status">
             {copyError
               ? "Clipboard unavailable. Select and copy the commands above."

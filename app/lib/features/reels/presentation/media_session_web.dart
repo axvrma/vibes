@@ -25,14 +25,18 @@ void setupMediaSessionControls({VoidCallback? onNext, VoidCallback? onPrev}) {
     if (_mediaSession != null) {
       if (onNext != null) {
         final jsOnNext = () {
-          _eval("document.querySelectorAll('video').forEach(function(v) { var p = v.play(); if (p !== undefined) p.catch(function(){}); })");
+          _eval(
+            "document.querySelectorAll('video').forEach(function(v) { var p = v.play(); if (p !== undefined) p.catch(function(){}); })",
+          );
           onNext();
         }.toJS;
         _setActionHandler('nexttrack', jsOnNext);
       }
       if (onPrev != null) {
         final jsOnPrev = () {
-          _eval("document.querySelectorAll('video').forEach(function(v) { var p = v.play(); if (p !== undefined) p.catch(function(){}); })");
+          _eval(
+            "document.querySelectorAll('video').forEach(function(v) { var p = v.play(); if (p !== undefined) p.catch(function(){}); })",
+          );
           onPrev();
         }.toJS;
         _setActionHandler('previoustrack', jsOnPrev);

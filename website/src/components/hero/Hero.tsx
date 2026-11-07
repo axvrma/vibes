@@ -20,7 +20,7 @@ export function Hero() {
         </h1>
         <p className="hero-description">
           All the joy of a vertical video feed, with your media and your rules.
-          Meet Vibes: a personal short-video experience built for self-hosting.
+          Meet Vibes: your private video universe, built for self-hosting.
         </p>
         <div className="hero-buttons">
           <a href="#experience" className="button button-pink">

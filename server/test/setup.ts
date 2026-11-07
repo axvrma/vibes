@@ -1,0 +1,13 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { afterAll } from 'vitest';
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'vibes-test-'));
+process.env.DATA_DIR=temp;
+process.env.DATABASE_PATH=path.join(temp,'sqlite.db');
+process.env.AUTH_ACCESS_TOKEN_SECRET='tests-only-secret-with-at-least-32-characters';
+process.env.MEDIA_ROOTS=JSON.stringify({test:path.join(temp,'media')});
+fs.mkdirSync(path.join(temp,'media'));
+fs.mkdirSync(path.join(temp,'uploads'));
+fs.mkdirSync(path.join(temp,'thumbnails'));
+afterAll(()=>fs.rmSync(temp,{recursive:true,force:true}));

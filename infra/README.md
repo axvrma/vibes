@@ -1,3 +1,5 @@
+> Vibes 2.3: follow [the upgrade and backup guide](../docs/UPGRADE-2.3.md) before the legacy quick-start below. Production secrets and exact origins are required. External mounts are opt-in through docker-compose.media.yml. Keep your existing project name and volume.
+
 # Vibes Infra Deployment Guide
 
 This folder contains the Docker Compose configurations required to deploy the complete Vibes ecosystem (App, Dashboard, and Server) smoothly on a local server.

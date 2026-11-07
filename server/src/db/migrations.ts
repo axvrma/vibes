@@ -1,11 +1,12 @@
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import type { Database } from 'better-sqlite3';
 
 export function runMigrations(db: Database, dbPath: string) {
   // Check if we need to run migrations
   const hasMigrationsTable = db.prepare("SELECT count(*) as c FROM sqlite_master WHERE type='table' AND name='schema_migrations'").get() as { c: number };
-  
+
   if (hasMigrationsTable.c === 0) {
     db.exec(`
       CREATE TABLE schema_migrations (
@@ -17,8 +18,8 @@ export function runMigrations(db: Database, dbPath: string) {
 
   const backupDb = () => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(path.dirname(dbPath), `sqlite_backup_${timestamp}.db`);
-    fs.copyFileSync(dbPath, backupPath);
+    const backupPath = path.join(path.dirname(dbPath), `sqlite_backup_${timestamp}_${randomUUID()}.db`);
+    db.prepare('VACUUM INTO ?').run(backupPath);
     console.log(`[DB] Database backed up to ${backupPath}`);
   };
 
@@ -149,7 +150,7 @@ export function runMigrations(db: Database, dbPath: string) {
   if (!applied.includes('004_user_video_state_migration')) {
     console.log('[DB] Applying migration: 004_user_video_state_migration');
     backupDb();
-    
+
     db.transaction(() => {
       // Check if user_video_state has user_id
       const columns = db.prepare("PRAGMA table_info(user_video_state)").all() as { name: string }[];
@@ -178,4 +179,45 @@ export function runMigrations(db: Database, dbPath: string) {
       recordMigration('004_user_video_state_migration');
     })();
   }
+  applyMigration('005_media_libraries', `
+    CREATE TABLE media_libraries (
+      id TEXT PRIMARY KEY, name TEXT NOT NULL, root_id TEXT NOT NULL,
+      relative_path TEXT NOT NULL DEFAULT '', root_device TEXT, root_inode TEXT, enabled INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0, recursive INTEGER NOT NULL DEFAULT 1, folder_categories INTEGER NOT NULL DEFAULT 1,
+      default_category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      UNIQUE(root_id, relative_path)
+    );
+    CREATE TABLE scan_jobs (
+      id TEXT PRIMARY KEY, library_id TEXT NOT NULL REFERENCES media_libraries(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK(status IN ('queued','running','completed','failed','cancelled','interrupted')),
+      created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT,
+      discovered_count INTEGER NOT NULL DEFAULT 0, added_count INTEGER NOT NULL DEFAULT 0,
+      updated_count INTEGER NOT NULL DEFAULT 0, missing_count INTEGER NOT NULL DEFAULT 0,
+      skipped_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
+      cancel_requested INTEGER NOT NULL DEFAULT 0, error_summary TEXT,
+      duration_ms INTEGER
+    );
+    CREATE UNIQUE INDEX scan_one_active ON scan_jobs(library_id) WHERE status IN ('queued','running');
+    CREATE INDEX scan_history ON scan_jobs(library_id, created_at DESC);
+    CREATE TABLE scan_errors (
+      id INTEGER PRIMARY KEY, job_id TEXT NOT NULL REFERENCES scan_jobs(id) ON DELETE CASCADE,
+      relative_path TEXT NOT NULL, message TEXT NOT NULL
+    );
+    ALTER TABLE videos ADD COLUMN source_type TEXT NOT NULL DEFAULT 'upload';
+    ALTER TABLE videos ADD COLUMN library_id TEXT REFERENCES media_libraries(id) ON DELETE RESTRICT;
+    ALTER TABLE videos ADD COLUMN relative_path TEXT;
+    ALTER TABLE videos ADD COLUMN mtime_ms REAL;
+    ALTER TABLE videos ADD COLUMN fingerprint TEXT;
+    ALTER TABLE videos ADD COLUMN availability TEXT NOT NULL DEFAULT 'available';
+    ALTER TABLE videos ADD COLUMN last_observed_scan TEXT;
+    ALTER TABLE videos ADD COLUMN metadata_overridden INTEGER NOT NULL DEFAULT 0;
+    CREATE UNIQUE INDEX videos_source_path ON videos(library_id, relative_path) WHERE library_id IS NOT NULL;
+    CREATE INDEX videos_library ON videos(library_id, availability);
+    CREATE INDEX videos_feed ON videos(deleted_at, processing_status, created_at DESC, id);
+    CREATE INDEX video_tags_tag ON video_tags(tag_id, video_id);
+    CREATE INDEX state_favorites ON user_video_state(user_id, liked, video_id);
+    CREATE INDEX videos_fingerprint ON videos(library_id, fingerprint);
+  `, true);
+
 }

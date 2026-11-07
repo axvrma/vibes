@@ -57,8 +57,15 @@ Add `--preset=desktop` for the desktop run. Run performance audits without other
 - Local Netlify build and configuration verified; production CDN headers, public domain, HTTPS, and deployed field performance require a real deployment. Nothing was published.
 - No application-service integration or end-to-end Docker installation was attempted; this is an independent static marketing site.
 - The dashboard is an explicitly labeled concept based on implemented repository capabilities, not an authentic screenshot.
-- The notes editor is an explicitly labeled concept: note storage APIs exist, but the current Flutter UI has no verified note editor. Demo state is session-only.
+- The notes editor is an explicitly labeled concept: note storage APIs exist, but the pre-2.3 Flutter UI had no verified note editor. The 2.3 implementation and validation are documented below. Demo state is session-only.
 - The sample clips are original animated illustrations, not real-world travel footage. They intentionally have no audio track.
 - No application license file was found. No permissive-license badge, store availability, fake metrics, or guaranteed privacy/security claims were added.
 
 See `PRODUCT-AUDIT.md` for claim-by-claim source evidence and `README.md` for deployment and asset-generation instructions.
+
+
+## 2.3 alignment validation (5 November 2026)
+
+After adding the accurate acquisition-mode/library section and canonical colors, `npm run check` passed (typecheck, ESLint, 10 unit tests, production build/prerender). Playwright passed 23 tests with 3 existing input-method skips, including axe checks and responsive widths. The later actual-dashboard capture is rechecked in the release validation record at `../docs/VALIDATION-2.3.md`; prior Lighthouse scores above are historical and are not claimed for the 2.3 page.
+
+The Flutter notes editor is now implemented and covered by widget tests. This static website still uses session-only demo state. The new screenshot is a real disposable test installation; the older interactive dashboard is still an explicitly labeled concept. See updated PRODUCT-AUDIT.md.

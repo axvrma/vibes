@@ -1,18 +1,18 @@
 <div class="flex min-h-screen items-center justify-center bg-muted/20 p-4">
-  <section hlmCard class="w-full min-w-[450px] max-w-[500px] shadow-lg border">
+  <section hlmCard class="w-full min-w-0 max-w-[500px] shadow-lg border">
     <div hlmCardHeader class="flex flex-col items-center space-y-4 pb-6 pt-8">
       <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
         <ng-icon hlm name="lucideClapperboard" class="h-6 w-6 text-primary"></ng-icon>
       </div>
       <div class="text-center">
-        <h3 hlmCardTitle class="text-2xl font-bold tracking-tight">Reels Dashboard</h3>
+        <h3 hlmCardTitle class="text-2xl font-bold tracking-tight">Vibes Dashboard</h3>
         <p hlmCardDescription class="mt-1.5 text-sm text-muted-foreground">Sign in to manage your private media</p>
       </div>
     </div>
-    
+
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col">
       <div hlmCardContent class="space-y-4 pb-4">
-        
+
         <!-- Error Message -->
         <div *ngIf="errorMessage" class="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium text-center">
           {{ errorMessage }}
@@ -41,7 +41,7 @@
               <div class="relative flex items-center">
                 <ng-icon hlm name="lucideLock" class="absolute left-3 h-4 w-4 text-muted-foreground"></ng-icon>
                 <input hlmInput id="password" [type]="hidePassword ? 'password' : 'text'" formControlName="password" class="pl-9 pr-9 w-full" placeholder="••••••••" />
-                <button type="button" class="absolute right-1 p-2 text-muted-foreground hover:text-foreground focus:outline-none" (click)="hidePassword = !hidePassword">
+                <button type="button" [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'" class="absolute right-1 p-2 text-muted-foreground hover:text-foreground focus:outline-none" (click)="hidePassword = !hidePassword">
                   <ng-icon hlm [name]="hidePassword ? 'lucideEyeOff' : 'lucideEye'" class="h-4 w-4"></ng-icon>
                 </button>
               </div>
@@ -52,7 +52,7 @@
           </div>
         </fieldset>
       </div>
-      
+
       <div hlmCardFooter class="pt-2 pb-6">
         <button hlmBtn type="submit" class="w-full" [disabled]="loginForm.invalid || isLoading">
           <hlm-spinner *ngIf="isLoading" class="mr-2 h-4 w-4"></hlm-spinner>

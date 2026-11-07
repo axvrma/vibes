@@ -2,12 +2,14 @@ import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from
 import { inject } from '@angular/core';
 import { AuthService } from './auth.service';
 import { catchError, switchMap, filter, take, throwError, BehaviorSubject } from 'rxjs';
+import { environment } from '../../environments/environment';
 import { Router } from '@angular/router';
 
 let isRefreshing = false;
-let refreshTokenSubject = new BehaviorSubject<string | null>(null);
+let refreshTokenSubject = new BehaviorSubject<string | null | false>(null);
 
 export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
+  if(!req.url.startsWith(environment.apiUrl+'/'))return next(req);
   const authService = inject(AuthService);
   const router = inject(Router);
 
@@ -25,11 +27,11 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !authReq.url.includes('/auth/login') && !authReq.url.includes('/auth/refresh')) {
+      if (error.status === 401 && !authReq.url.includes('/auth/')) {
         if (!isRefreshing) {
           isRefreshing = true;
           refreshTokenSubject.next(null);
-          
+
           return authService.refresh().pipe(
             switchMap((res) => {
               isRefreshing = false;
@@ -41,6 +43,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
             }),
             catchError((err) => {
               isRefreshing = false;
+              refreshTokenSubject.next(false);
               authService.logout().subscribe();
               return throwError(() => err);
             })
@@ -51,6 +54,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
             filter(token => token !== null),
             take(1),
             switchMap(newToken => {
+              if(newToken===false)return throwError(()=>new Error('Session expired'));
               const newReq = authReq.clone({
                 headers: authReq.headers.set('Authorization', `Bearer ${newToken}`)
               });

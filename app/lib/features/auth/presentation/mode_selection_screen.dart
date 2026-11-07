@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:hugeicons/hugeicons.dart';
+import '../../../core/config/local_folder_access.dart';
 import '../../../core/config/settings_repository.dart';
 import '../../reels/presentation/video_feed_screen.dart';
 import 'login_screen.dart';
@@ -38,25 +36,18 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
     if (kIsWeb) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Local Folder Mode is not supported on Web. Please use Network Mode.')),
+          const SnackBar(
+            content: Text(
+              'Local Folder Mode is not supported on Web. Please use Network Mode.',
+            ),
+          ),
         );
       }
       return;
     }
 
-    bool hasPermission = false;
-    if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-      if (await Permission.manageExternalStorage.request().isGranted) {
-        hasPermission = true;
-      } else if (await Permission.storage.request().isGranted) {
-        hasPermission = true;
-      }
-    } else {
-      hasPermission = true;
-    }
-
-    if (hasPermission) {
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    try {
+      String? selectedDirectory = await LocalFolderAccess.pick();
       if (selectedDirectory != null) {
         await _settings.setLocalFolderPath(selectedDirectory);
         await _settings.setLocalMode(true);
@@ -67,10 +58,10 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
           );
         }
       }
-    } else {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Storage permission is required for Local Mode')),
+          SnackBar(content: Text('Could not open the folder: $error')),
         );
       }
     }
@@ -84,15 +75,24 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
       );
       return;
     }
-    
-    await _settings.setServerUrl(url);
+
+    try {
+      await _settings.setServerUrl(url);
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return;
+    }
     await _settings.setLocalMode(false);
     await _settings.setHasSelectedMode(true);
-    
+
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     }
   }
 
@@ -101,7 +101,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Mode'),
-        backgroundColor: const Color(0xFF0A0A0F),
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -112,49 +112,70 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
             children: [
               Text(
                 kIsWeb ? 'Connect to Vibes Server' : 'Select Mode',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-              
+
               if (!_showNetworkInput && !kIsWeb) ...[
                 ElevatedButton.icon(
                   onPressed: _selectLocalMode,
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolder01, color: Colors.white, size: 24.0),
-                  label: const Text('Local Folder Mode', style: TextStyle(fontSize: 16)),
+                  icon: const Icon(
+                    Icons.folder_outlined,
+                    color: Colors.white,
+                    size: 24.0,
+                  ),
+                  label: const Text(
+                    'On this device',
+                    style: TextStyle(fontSize: 16),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE040FB),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFF3D81),
+                    foregroundColor: const Color(0xFF211725),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Play videos directly from a folder on this device. No login required.',
+                  'Enjoy videos stored locally on your device. No account needed.',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                
+
                 OutlinedButton.icon(
                   onPressed: () {
                     setState(() {
                       _showNetworkInput = true;
                     });
                   },
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedGlobal, color: Colors.white, size: 24.0),
-                  label: const Text('Network Mode', style: TextStyle(fontSize: 16)),
+                  icon: const Icon(
+                    Icons.dns_outlined,
+                    color: Colors.white,
+                    size: 24.0,
+                  ),
+                  label: const Text(
+                    'Connect to my Vibes server',
+                    style: TextStyle(fontSize: 16),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE040FB)),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: const BorderSide(color: Color(0xFFFF3D81)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Connect to a self-hosted server to sync likes and progress.',
+                  'Stream and organize videos from your private media server.',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
@@ -166,13 +187,21 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _urlController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   decoration: const InputDecoration(
                     hintText: 'http://10.0.2.2:3000/api',
                     hintStyle: TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(),
-                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Color(0xFFE040FB))),
-                    prefixIcon: HugeIcon(icon: HugeIcons.strokeRoundedLink01, color: Colors.grey, size: 24.0),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFFFF3D81)),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.link,
+                      color: Colors.grey,
+                      size: 24.0,
+                    ),
                   ),
                   keyboardType: TextInputType.url,
                 ),
@@ -185,12 +214,17 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
                 ElevatedButton(
                   onPressed: _selectNetworkMode,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE040FB),
-                    foregroundColor: Colors.white,
+                    backgroundColor: const Color(0xFFFF3D81),
+                    foregroundColor: const Color(0xFF211725),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text('Continue to Login', style: TextStyle(fontSize: 16)),
+                  child: const Text(
+                    'Continue to Login',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 if (!kIsWeb)
@@ -202,7 +236,7 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
                     },
                     child: const Text('Back to Mode Selection'),
                   ),
-              ]
+              ],
             ],
           ),
         ),
